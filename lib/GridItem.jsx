@@ -37,6 +37,7 @@ import type {
 
 import type { PositionParams } from "./calculateUtils";
 import type { ResizeHandle, ReactRef } from "./ReactGridLayoutPropTypes";
+import type { CrossGridContextValue } from "./CrossGridContext";
 
 type PartialPosition = { top: number, left: number };
 type GridItemCallback<Data: GridDragEvent | GridResizeEvent> = (
@@ -106,7 +107,12 @@ type Props = {
   onDragStop?: GridItemCallback<GridDragEvent>,
   onResize?: GridItemCallback<GridResizeEvent>,
   onResizeStart?: GridItemCallback<GridResizeEvent>,
-  onResizeStop?: GridItemCallback<GridResizeEvent>
+  onResizeStop?: GridItemCallback<GridResizeEvent>,
+
+  // Cross-grid drag and drop
+  gridId?: ?string,
+  enableCrossGridDrag?: boolean,
+  crossGridContext?: ?CrossGridContextValue
 };
 
 type DefaultProps = {
@@ -466,6 +472,30 @@ export default class GridItem extends React.Component<Props, State> {
     newPosition.top = cTop - pTop + offsetParent.scrollTop;
     this.setState({ dragging: newPosition });
 
+    // Notify cross-grid context
+    if (this.props.enableCrossGridDrag && this.props.crossGridContext && this.props.gridId) {
+      const layoutItem = {
+        i: this.props.i,
+        x: this.props.x,
+        y: this.props.y,
+        w: this.props.w,
+        h: this.props.h
+      };
+
+      // Calculate offset from item's top-left to mouse position
+      const offsetX = e.clientX - clientRect.left;
+      const offsetY = e.clientY - clientRect.top;
+
+      this.props.crossGridContext.startDrag(
+        this.props.gridId,
+        layoutItem,
+        e.clientX,
+        e.clientY,
+        offsetX,
+        offsetY
+      );
+    }
+
     // Call callback with this data
     const { x, y } = calcXY(
       this.getPositionParams(),
@@ -533,6 +563,11 @@ export default class GridItem extends React.Component<Props, State> {
       });
     }
 
+    // Update cross-grid context with mouse position
+    if (this.props.enableCrossGridDrag && this.props.crossGridContext && e.clientX != null && e.clientY != null) {
+      this.props.crossGridContext.updateDrag(e.clientX, e.clientY);
+    }
+
     // Call callback with this data
     const { x, y } = calcXY(positionParams, top, left, w, h);
     return onDrag.call(this, i, x, y, {
@@ -560,6 +595,27 @@ export default class GridItem extends React.Component<Props, State> {
     this.setState({ dragging: null });
 
     const { x, y } = calcXY(this.getPositionParams(), top, left, w, h);
+
+    // Notify cross-grid context about drag end
+    // The context will determine if this was dropped on another grid
+    if (this.props.enableCrossGridDrag && this.props.crossGridContext && this.props.gridId) {
+      // Determine which grid we're over based on mouse position
+      let targetGridId = null;
+      if (this.props.crossGridContext.dragState) {
+        // Check if mouse is over a different grid
+        for (const [gridId, gridInfo] of this.props.crossGridContext.grids.entries()) {
+          if (gridId !== this.props.gridId && gridInfo.element) {
+            const rect = gridInfo.element.getBoundingClientRect();
+            if (e.clientX >= rect.left && e.clientX <= rect.right &&
+                e.clientY >= rect.top && e.clientY <= rect.bottom) {
+              targetGridId = gridId;
+              break;
+            }
+          }
+        }
+      }
+      this.props.crossGridContext.endDrag(targetGridId);
+    }
 
     return onDragStop.call(this, i, x, y, {
       e,

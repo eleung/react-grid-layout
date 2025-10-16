@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### New Features
+
+- **Cross-Grid Drag and Drop**: Items can now be dragged between multiple grid instances.
+  - New `<CrossGridProvider>` component to enable cross-grid functionality
+  - New `enableCrossGridDrag` prop to opt-in to cross-grid dragging
+  - New `crossGridAcceptsDrop` prop (boolean or predicate function) for conditional drop acceptance
+  - New `crossGridTransform` prop for custom item transformations between grids
+  - Automatic size preservation when dragging between grids with different configurations
+  - Visual feedback with `.drop-active` and `.drop-source` CSS classes
+  - Smart collapse behavior: items only collapse when over valid drop targets
+  - Predicate support enables powerful use cases:
+    - Accept drops only from specific grids
+    - Accept only certain item types
+    - Conditional acceptance based on grid state
+  - See [example #22](https://react-grid-layout.github.io/react-grid-layout/examples/22-cross-grid-drag.html)
+
 ## 1.5.2 (Jun 25, 2025)
 
 - Fix `calcXY` when `isBounded=true` moving items incorrectly. Likely related to #2059. Thanks @wanpan11. [#2102](https://github.com/react-grid-layout/react-grid-layout/pull/2102)

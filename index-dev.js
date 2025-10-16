@@ -5,3 +5,5 @@ module.exports.Responsive = require("./lib/ResponsiveReactGridLayout").default;
 module.exports.Responsive.utils = require("./lib/responsiveUtils");
 module.exports.WidthProvider =
   require("./lib/components/WidthProvider").default;
+module.exports.CrossGridProvider =
+  require("./lib/CrossGridProvider").default;

@@ -25,6 +25,7 @@ RGL is React-only and does not require jQuery.
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Cross-Grid Drag and Drop Usage](#cross-grid-drag-and-drop-usage)
 - [Responsive Usage](#responsive-usage)
 - [Providing Grid Width](#providing-grid-width)
 - [Grid Layout Props](#grid-layout-props)
@@ -59,6 +60,7 @@ RGL is React-only and does not require jQuery.
 1. [Allow Overlap](https://react-grid-layout.github.io/react-grid-layout/examples/19-allow-overlap.html)
 1. [All Resizable Handles](https://react-grid-layout.github.io/react-grid-layout/examples/20-resizable-handles.html)
 1. [Single Row Horizontal](https://react-grid-layout.github.io/react-grid-layout/examples/21-horizontal.html)
+1. [Cross-Grid Drag and Drop](https://react-grid-layout.github.io/react-grid-layout/examples/22-cross-grid-drag.html)
 
 #### Projects Using React-Grid-Layout
 
@@ -96,6 +98,7 @@ _Know of others? Create a PR to let me know!_
 - Layout can be serialized and restored
 - Responsive breakpoints
 - Separate layouts per responsive breakpoint
+- **Cross-grid drag and drop** - Drag items between multiple grid instances
 - Grid Items placed using CSS Transforms
   - Performance with CSS Transforms: [on](http://i.imgur.com/FTogpLp.jpg) / [off](http://i.imgur.com/gOveMm8.jpg), note paint (green) as % of time
 - Compatibility with `<React.StrictMode>`
@@ -188,6 +191,80 @@ class MyFirstGrid extends React.Component {
 
 A module usable in a `<script>` tag is included [here](/dist/react-grid-layout.min.js). It uses a UMD shim and
 excludes `React`, so it must be otherwise available in your application, either via RequireJS or on `window.React`.
+
+### Cross-Grid Drag and Drop Usage
+
+To enable dragging items between multiple grid instances, wrap your grids with `<CrossGridProvider>`:
+
+```js
+import GridLayout, { CrossGridProvider } from "react-grid-layout";
+
+class MyCrossGridExample extends React.Component {
+  state = {
+    layout1: [{ i: "a", x: 0, y: 0, w: 2, h: 2 }],
+    layout2: [{ i: "b", x: 0, y: 0, w: 2, h: 2 }]
+  };
+
+  onLayoutChange1 = (layout) => this.setState({ layout1: layout });
+  onLayoutChange2 = (layout) => this.setState({ layout2: layout });
+
+  render() {
+    return (
+      <CrossGridProvider>
+        <GridLayout
+          id="grid-1"
+          enableCrossGridDrag={true}
+          layout={this.state.layout1}
+          onLayoutChange={this.onLayoutChange1}
+          cols={12}
+          rowHeight={30}
+          width={600}
+        >
+          {this.state.layout1.map(item => (
+            <div key={item.i}>{item.i}</div>
+          ))}
+        </GridLayout>
+
+        <GridLayout
+          id="grid-2"
+          enableCrossGridDrag={true}
+          layout={this.state.layout2}
+          onLayoutChange={this.onLayoutChange2}
+          cols={12}
+          rowHeight={30}
+          width={600}
+        >
+          {this.state.layout2.map(item => (
+            <div key={item.i}>{item.i}</div>
+          ))}
+        </GridLayout>
+      </CrossGridProvider>
+    );
+  }
+}
+```
+
+**Advanced: Conditional Drop Acceptance**
+
+Use a predicate function to control which items can be dropped on a grid:
+
+```js
+// Only accept items from a specific grid
+<GridLayout
+  id="grid-2"
+  enableCrossGridDrag={true}
+  crossGridAcceptsDrop={(item, sourceGridId) => sourceGridId === "grid-1"}
+  // ... other props
+/>
+
+// Only accept specific item types
+<GridLayout
+  id="grid-2"
+  enableCrossGridDrag={true}
+  crossGridAcceptsDrop={(item, sourceGridId) => item.type === "widget"}
+  // ... other props
+/>
+```
 
 ### Responsive Usage
 
@@ -358,6 +435,33 @@ preventCollision: ?boolean = false,
 // onDragStart attribute is required for Firefox for a dragging initialization
 // @see https://bugzilla.mozilla.org/show_bug.cgi?id=568313
 isDroppable: ?boolean = false,
+
+//
+// Cross-Grid Drag and Drop
+//
+
+// Unique identifier for this grid instance. Required when using cross-grid drag and drop.
+id: ?string,
+
+// If true, enables cross-grid drag and drop functionality.
+// Items can be dragged between multiple grid instances wrapped in a <CrossGridProvider>.
+enableCrossGridDrag: ?boolean = false,
+
+// Controls whether this grid accepts items dropped from other grids.
+// Can be a boolean or a predicate function for conditional acceptance.
+// When using a predicate function, it receives the dragged item and source grid ID:
+//   (item: LayoutItem, sourceGridId: string) => boolean
+// Examples:
+//   - true/false: Accept/reject all drops
+//   - (item, sourceGridId) => sourceGridId === "grid-1": Only accept from specific grid
+//   - (item, sourceGridId) => item.type === "widget": Only accept specific item types
+crossGridAcceptsDrop: ?(boolean | (item: LayoutItem, sourceGridId: string) => boolean) = true,
+
+// Optional transform function to adapt items when dragging between grids with different configurations.
+// Receives the item and both grid configurations, returns the transformed item.
+// If not provided, items are automatically resized to preserve physical dimensions.
+// Example: (item, sourceConfig, targetConfig) => ({ ...item, w: item.w * 2 })
+crossGridTransform: ?(item: LayoutItem, sourceConfig: GridConfig, targetConfig: GridConfig) => LayoutItem,
 // Defines which resize handles should be rendered.
 // Allows for any combination of:
 // 's' - South handle (bottom-center)

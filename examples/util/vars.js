@@ -182,4 +182,12 @@ module.exports = [
       "This demonstrates how to constrain the elements to a single row."
     ]
   },
+  {
+    title: "Cross-Grid Drag and Drop",
+    source: "cross-grid-drag",
+    paragraphs: [
+      "This demonstrates how to drag items between multiple grids.",
+      "Items stay in their source grid during drag and show a placeholder in the target grid."
+    ]
+  },
 ];
