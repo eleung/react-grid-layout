@@ -6,5 +6,11 @@ module.exports.Responsive =
 module.exports.Responsive.utils = require("./build/responsiveUtils");
 module.exports.WidthProvider =
   require("./build/components/WidthProvider").default;
-module.exports.CrossGridProvider =
-  require("./build/CrossGridProvider").default;
+
+// Drag and drop exports
+module.exports.DragDropProvider =
+  require("./build/DragDropProvider").default;
+module.exports.DragDropContext =
+  require("./build/DragDropContext").default;
+module.exports.Droppable =
+  require("./build/components/Droppable").default;

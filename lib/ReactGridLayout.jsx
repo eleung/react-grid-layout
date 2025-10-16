@@ -22,8 +22,8 @@ import { calcXY } from "./calculateUtils";
 
 import GridItem from "./GridItem";
 import ReactGridLayoutPropTypes from "./ReactGridLayoutPropTypes";
-import CrossGridContext from "./CrossGridContext";
-import type { CrossGridContextValue } from "./CrossGridContext";
+import DragDropContext from "./DragDropContext";
+import type { DragDropContextValue } from "./DragDropContext";
 import type {
   ChildrenArray as ReactChildrenArray,
   Element as ReactElement
@@ -85,9 +85,9 @@ export default class ReactGridLayout extends React.Component<Props, State> {
   // Refactored to another module to make way for preval
   static propTypes = ReactGridLayoutPropTypes;
 
-  // Context for cross-grid drag and drop
-  static contextType = CrossGridContext;
-  context: ?CrossGridContextValue;
+  // Context for drag and drop (grids and external containers)
+  static contextType = DragDropContext;
+  context: ?DragDropContextValue;
 
   static defaultProps: DefaultProps = {
     autoSize: true,
@@ -167,17 +167,20 @@ export default class ReactGridLayout extends React.Component<Props, State> {
     // to ensure we don't rerender with the wrong width.
     this.onLayoutMaybeChanged(this.state.layout, this.props.layout);
 
-    // Register with cross-grid context if enabled
+    // Register with drag-drop context if enabled
     if (this.props.enableCrossGridDrag && this.context && this.props.id && this.gridRef.current) {
-      this.context.registerGrid(
+      this.context.registerDropTarget(
         this.props.id,
         this.gridRef.current,
-        this.props.cols,
-        this.props.rowHeight,
-        this.props.width,
-        this.props.margin,
-        this.getAcceptsDrop(),
-        this.onItemRemovedFromGrid
+        'grid',
+        {
+          cols: this.props.cols,
+          rowHeight: this.props.rowHeight,
+          containerWidth: this.props.width,
+          margin: this.props.margin,
+          acceptsDrop: this.getAcceptsDrop(),
+          onItemRemoved: this.onItemRemovedFromGrid
+        }
       );
     }
 
@@ -186,9 +189,9 @@ export default class ReactGridLayout extends React.Component<Props, State> {
   }
 
   componentWillUnmount() {
-    // Unregister from cross-grid context
+    // Unregister from drag-drop context
     if (this.props.enableCrossGridDrag && this.context && this.props.id) {
-      this.context.unregisterGrid(this.props.id);
+      this.context.unregisterDropTarget(this.props.id);
     }
 
     // Clean up resize listener
@@ -258,7 +261,7 @@ export default class ReactGridLayout extends React.Component<Props, State> {
   }
 
   componentDidUpdate(prevProps: Props, prevState: State) {
-    // Update grid config in context if width or other grid properties changed
+    // Update drop target config in context if width or other grid properties changed
     if (this.props.enableCrossGridDrag && this.context && this.props.id) {
       if (
         prevProps.width !== this.props.width ||
@@ -266,7 +269,7 @@ export default class ReactGridLayout extends React.Component<Props, State> {
         prevProps.rowHeight !== this.props.rowHeight ||
         prevProps.crossGridAcceptsDrop !== this.props.crossGridAcceptsDrop
       ) {
-        this.context.updateGridConfig(this.props.id, {
+        this.context.updateDropTargetConfig(this.props.id, {
           containerWidth: this.props.width,
           cols: this.props.cols,
           rowHeight: this.props.rowHeight,
@@ -394,15 +397,15 @@ export default class ReactGridLayout extends React.Component<Props, State> {
     let shouldCollapseItem = false;
     if (this.props.enableCrossGridDrag && this.context?.dragState && oldDragItem) {
       const { dragState } = this.context;
-      if (dragState.sourceGridId === this.props.id) {
-        for (const [gridId, gridInfo] of this.context.grids.entries()) {
-          if (gridId !== this.props.id && gridInfo.element) {
-            const accepts = typeof gridInfo.acceptsDrop === 'function'
-              ? gridInfo.acceptsDrop(dragState.item, dragState.sourceGridId)
-              : gridInfo.acceptsDrop;
+      if (dragState.sourceId === this.props.id) {
+        for (const [targetId, targetConfig] of this.context.dropTargets.entries()) {
+          if (targetId !== this.props.id && targetConfig.element) {
+            const accepts = typeof targetConfig.acceptsDrop === 'function'
+              ? targetConfig.acceptsDrop(dragState.item, dragState.sourceId)
+              : targetConfig.acceptsDrop;
 
             if (accepts) {
-              const rect = gridInfo.element.getBoundingClientRect();
+              const rect = targetConfig.element.getBoundingClientRect();
               if (dragState.mouseX >= rect.left && dragState.mouseX <= rect.right &&
                   dragState.mouseY >= rect.top && dragState.mouseY <= rect.bottom) {
                 shouldCollapseItem = true;
@@ -460,7 +463,7 @@ export default class ReactGridLayout extends React.Component<Props, State> {
 
     const isSourceGrid = this.props.enableCrossGridDrag &&
                          this.context?.dragState &&
-                         this.context.dragState.sourceGridId === this.props.id;
+                         this.context.dragState.sourceId === this.props.id;
 
     this.setState({
       layout: finalLayout,
@@ -727,7 +730,7 @@ export default class ReactGridLayout extends React.Component<Props, State> {
   };
 
   /**
-   * Handle external drag from another grid
+   * Handle external drag from another drop target
    */
   handleExternalDrag = (): void => {
     if (!this.props.enableCrossGridDrag || !this.context || !this.gridRef.current) return;
@@ -735,7 +738,7 @@ export default class ReactGridLayout extends React.Component<Props, State> {
     const { dragState } = this.context;
 
     // If no drag or this is the source grid, clear any external drag state
-    if (!dragState || dragState.sourceGridId === this.props.id) {
+    if (!dragState || dragState.sourceId === this.props.id) {
       // Clear activeDrag if it was from an external source
       if (this.state.activeDrag && this.state.activeDrag.i.startsWith("__external__")) {
         this.setState({
@@ -749,7 +752,7 @@ export default class ReactGridLayout extends React.Component<Props, State> {
 
     // Check if this grid accepts drops from the source
     const accepts = typeof this.props.crossGridAcceptsDrop === 'function'
-      ? this.props.crossGridAcceptsDrop(dragState.item, dragState.sourceGridId)
+      ? this.props.crossGridAcceptsDrop(dragState.item, dragState.sourceId)
       : this.props.crossGridAcceptsDrop !== false;
 
     if (!accepts) {
@@ -778,9 +781,10 @@ export default class ReactGridLayout extends React.Component<Props, State> {
     }
 
     // Transform item from source grid to target grid dimensions
-    const sourceConfig = this.context.grids.get(dragState.sourceGridId);
+    const sourceConfig = this.context.dropTargets.get(dragState.sourceId);
     const targetConfig = {
       id: this.props.id,
+      type: 'grid',
       element: this.gridRef.current,
       cols: this.props.cols,
       rowHeight: this.props.rowHeight,
@@ -942,7 +946,7 @@ export default class ReactGridLayout extends React.Component<Props, State> {
     this.onLayoutMaybeChanged(newLayout, this.state.oldLayout || layout);
   };
 
-  getAcceptsDrop = (): boolean | ((item: LayoutItem, sourceGridId: string) => boolean) => {
+  getAcceptsDrop = (): boolean | ((item: LayoutItem, sourceId: string) => boolean) => {
     const { crossGridAcceptsDrop } = this.props;
     return crossGridAcceptsDrop === false ? false : crossGridAcceptsDrop || true;
   };
@@ -1180,7 +1184,7 @@ export default class ReactGridLayout extends React.Component<Props, State> {
         resizeHandle={resizeHandle}
         gridId={this.props.id}
         enableCrossGridDrag={this.props.enableCrossGridDrag}
-        crossGridContext={this.context}
+        dragDropContext={this.context}
       >
         {child}
       </GridItem>

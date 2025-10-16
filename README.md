@@ -25,10 +25,13 @@ RGL is React-only and does not require jQuery.
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Cross-Grid Drag and Drop Usage](#cross-grid-drag-and-drop-usage)
+- [Drag and Drop Usage](#drag-and-drop-usage)
+  - [Cross-Grid Drag and Drop](#cross-grid-drag-and-drop)
+  - [External Droppable Containers](#external-droppable-containers)
 - [Responsive Usage](#responsive-usage)
 - [Providing Grid Width](#providing-grid-width)
 - [Grid Layout Props](#grid-layout-props)
+- [Droppable Props](#droppable-props)
 - [Responsive Grid Layout Props](#responsive-grid-layout-props)
 - [Grid Item Props](#grid-item-props)
 - [User Recipes](../../wiki/Users-recipes)
@@ -61,6 +64,7 @@ RGL is React-only and does not require jQuery.
 1. [All Resizable Handles](https://react-grid-layout.github.io/react-grid-layout/examples/20-resizable-handles.html)
 1. [Single Row Horizontal](https://react-grid-layout.github.io/react-grid-layout/examples/21-horizontal.html)
 1. [Cross-Grid Drag and Drop](https://react-grid-layout.github.io/react-grid-layout/examples/22-cross-grid-drag.html)
+1. [External Droppable Containers](https://react-grid-layout.github.io/react-grid-layout/examples/23-external-droppable.html)
 
 #### Projects Using React-Grid-Layout
 
@@ -98,7 +102,8 @@ _Know of others? Create a PR to let me know!_
 - Layout can be serialized and restored
 - Responsive breakpoints
 - Separate layouts per responsive breakpoint
-- **Cross-grid drag and drop** - Drag items between multiple grid instances
+- **Drag and drop between grids** - Drag items between multiple grid instances
+- **External droppable containers** - Drag items to custom drop zones outside grids
 - Grid Items placed using CSS Transforms
   - Performance with CSS Transforms: [on](http://i.imgur.com/FTogpLp.jpg) / [off](http://i.imgur.com/gOveMm8.jpg), note paint (green) as % of time
 - Compatibility with `<React.StrictMode>`
@@ -192,12 +197,14 @@ class MyFirstGrid extends React.Component {
 A module usable in a `<script>` tag is included [here](/dist/react-grid-layout.min.js). It uses a UMD shim and
 excludes `React`, so it must be otherwise available in your application, either via RequireJS or on `window.React`.
 
-### Cross-Grid Drag and Drop Usage
+## Drag and Drop Usage
 
-To enable dragging items between multiple grid instances, wrap your grids with `<CrossGridProvider>`:
+### Cross-Grid Drag and Drop
+
+To enable dragging items between multiple grid instances, wrap your grids with `<DragDropProvider>`:
 
 ```js
-import GridLayout, { CrossGridProvider } from "react-grid-layout";
+import GridLayout, { DragDropProvider } from "react-grid-layout";
 
 class MyCrossGridExample extends React.Component {
   state = {
@@ -210,7 +217,7 @@ class MyCrossGridExample extends React.Component {
 
   render() {
     return (
-      <CrossGridProvider>
+      <DragDropProvider>
         <GridLayout
           id="grid-1"
           enableCrossGridDrag={true}
@@ -238,7 +245,7 @@ class MyCrossGridExample extends React.Component {
             <div key={item.i}>{item.i}</div>
           ))}
         </GridLayout>
-      </CrossGridProvider>
+      </DragDropProvider>
     );
   }
 }
@@ -253,7 +260,7 @@ Use a predicate function to control which items can be dropped on a grid:
 <GridLayout
   id="grid-2"
   enableCrossGridDrag={true}
-  crossGridAcceptsDrop={(item, sourceGridId) => sourceGridId === "grid-1"}
+  crossGridAcceptsDrop={(item, sourceId) => sourceId === "grid-1"}
   // ... other props
 />
 
@@ -261,9 +268,104 @@ Use a predicate function to control which items can be dropped on a grid:
 <GridLayout
   id="grid-2"
   enableCrossGridDrag={true}
-  crossGridAcceptsDrop={(item, sourceGridId) => item.type === "widget"}
+  crossGridAcceptsDrop={(item, sourceId) => item.type === "widget"}
   // ... other props
 />
+```
+
+### External Droppable Containers
+
+Use the `<Droppable>` component to create custom drop zones outside of grids:
+
+```js
+import GridLayout, { DragDropProvider, Droppable } from "react-grid-layout";
+
+class ExternalDropExample extends React.Component {
+  state = {
+    layout: [
+      { i: "a", x: 0, y: 0, w: 2, h: 2 },
+      { i: "b", x: 2, y: 0, w: 2, h: 2 }
+    ],
+    deletedItems: []
+  };
+
+  handleDrop = (item) => {
+    // Item was dropped on the trash zone
+    this.setState(prev => ({
+      deletedItems: [...prev.deletedItems, item.i]
+    }));
+  };
+
+  onLayoutChange = (layout) => {
+    this.setState({ layout });
+  };
+
+  render() {
+    return (
+      <DragDropProvider>
+        <GridLayout
+          id="grid-1"
+          enableCrossGridDrag={true}
+          layout={this.state.layout}
+          onLayoutChange={this.onLayoutChange}
+          cols={12}
+          rowHeight={30}
+          width={600}
+        >
+          {this.state.layout.map(item => (
+            <div key={item.i}>{item.i}</div>
+          ))}
+        </GridLayout>
+
+        <Droppable
+          id="trash"
+          onDrop={this.handleDrop}
+          className="trash-zone"
+          activeClassName="drop-active"
+        >
+          {({ isActive, draggedItem }) => (
+            <div>
+              {isActive
+                ? `Drop ${draggedItem?.i} to delete`
+                : "🗑️ Drag items here to delete"
+              }
+            </div>
+          )}
+        </Droppable>
+      </DragDropProvider>
+    );
+  }
+}
+```
+
+**Droppable Features:**
+
+- **Automatic CSS classes:** `.drop-active` when mouse is over, `.drop-source` for source grids
+- **Render props:** Access to `isActive`, `isSource`, `draggedItem`, `mouseX`, `mouseY`
+- **Event callbacks:** `onDragEnter`, `onDragOver`, `onDragLeave`, `onDrop`
+- **Conditional acceptance:** Use boolean or predicate function
+- **Live positioning:** Mouse coordinates for custom placeholders
+
+**Advanced: Custom Placeholder**
+
+```js
+<Droppable id="canvas" onDragOver={(item, mouseX, mouseY) => {
+  // Update placeholder position in real-time
+  this.setState({ placeholderX: mouseX, placeholderY: mouseY });
+}}>
+  {({ isActive, mouseX, mouseY, draggedItem }) => (
+    <div className="canvas">
+      {isActive && (
+        <div
+          className="placeholder"
+          style={{ left: mouseX - 25, top: mouseY - 25 }}
+        >
+          {draggedItem?.i}
+        </div>
+      )}
+    </div>
+  )}
+</Droppable>
 ```
 
 ### Responsive Usage
@@ -444,18 +546,18 @@ isDroppable: ?boolean = false,
 id: ?string,
 
 // If true, enables cross-grid drag and drop functionality.
-// Items can be dragged between multiple grid instances wrapped in a <CrossGridProvider>.
+// Items can be dragged between multiple grid instances wrapped in a <DragDropProvider>.
 enableCrossGridDrag: ?boolean = false,
 
 // Controls whether this grid accepts items dropped from other grids.
 // Can be a boolean or a predicate function for conditional acceptance.
-// When using a predicate function, it receives the dragged item and source grid ID:
-//   (item: LayoutItem, sourceGridId: string) => boolean
+// When using a predicate function, it receives the dragged item and source ID:
+//   (item: LayoutItem, sourceId: string) => boolean
 // Examples:
 //   - true/false: Accept/reject all drops
-//   - (item, sourceGridId) => sourceGridId === "grid-1": Only accept from specific grid
-//   - (item, sourceGridId) => item.type === "widget": Only accept specific item types
-crossGridAcceptsDrop: ?(boolean | (item: LayoutItem, sourceGridId: string) => boolean) = true,
+//   - (item, sourceId) => sourceId === "grid-1": Only accept from specific grid
+//   - (item, sourceId) => item.type === "widget": Only accept specific item types
+crossGridAcceptsDrop: ?(boolean | (item: LayoutItem, sourceId: string) => boolean) = true,
 
 // Optional transform function to adapt items when dragging between grids with different configurations.
 // Receives the item and both grid configurations, returns the transformed item.
@@ -525,6 +627,97 @@ onDropDragOver: (e: DragOverEvent) => ?({|w?: number, h?: number|} | false),
 // Note that this type is React.Ref<HTMLDivElement> in TypeScript, Flow has a bug here
 // https://github.com/facebook/flow/issues/8671#issuecomment-862634865
 innerRef: {current: null | HTMLDivElement},
+```
+
+## Droppable Props
+
+The `<Droppable>` component creates external drop zones for grid items. It supports the following props:
+
+```js
+//
+// Required props
+//
+
+// Unique identifier for this droppable container
+id: string,
+
+//
+// Drop acceptance
+//
+
+// Controls whether this droppable accepts items
+// Can be a boolean or a predicate function for conditional acceptance
+// When using a predicate function, it receives the dragged item and source ID:
+//   (item: LayoutItem, sourceId: string) => boolean
+// Examples:
+//   - true: Accept all drops (default)
+//   - false: Reject all drops
+//   - (item, sourceId) => sourceId === "grid-1": Only accept from specific grid
+//   - (item, sourceId) => item.type === "widget": Only accept specific item types
+acceptsDrop: ?(boolean | (item: LayoutItem, sourceId: string) => boolean) = true,
+
+//
+// Event callbacks
+//
+
+// Called when an item is dropped on this droppable
+// Receives the dropped item and mouse coordinates
+onDrop: ?(item: LayoutItem, mouseX: number, mouseY: number) => void,
+
+// Called when drag enters this droppable
+onDragEnter: ?(item: LayoutItem, mouseX: number, mouseY: number) => void,
+
+// Called on every mouse move while over this droppable
+// Useful for updating custom placeholders in real-time
+onDragOver: ?(item: LayoutItem, mouseX: number, mouseY: number) => void,
+
+// Called when drag leaves this droppable
+onDragLeave: ?(item: LayoutItem) => void,
+
+//
+// Styling
+//
+
+// Base CSS class name
+className: ?string,
+
+// CSS class applied when mouse is over this droppable
+activeClassName: ?string = "drop-active",
+
+// CSS class applied when this is the drag source
+sourceClassName: ?string = "drop-source",
+
+// Inline styles
+style: ?Object,
+
+//
+// Children
+//
+
+// Can be React nodes or a render prop function
+// Render prop receives: { isActive, isSource, draggedItem, mouseX, mouseY }
+children: ReactNode | ((props: RenderProps) => ReactNode),
+```
+
+**Render Props:**
+
+```js
+type RenderProps = {
+  // true when mouse is currently over this droppable
+  isActive: boolean,
+
+  // true when this droppable is the drag source
+  isSource: boolean,
+
+  // The item currently being dragged (null when not dragging)
+  draggedItem: ?LayoutItem,
+
+  // Current mouse X coordinate (null when not over this droppable)
+  mouseX: ?number,
+
+  // Current mouse Y coordinate (null when not over this droppable)
+  mouseY: ?number
+};
 ```
 
 ### Responsive Grid Layout Props

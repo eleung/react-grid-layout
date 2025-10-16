@@ -1,10 +1,10 @@
 import React from "react";
-import RGL, { WidthProvider, CrossGridProvider } from "../../index-dev.js";
+import RGL, { WidthProvider, DragDropProvider } from "../../index-dev.js";
 
 const ReactGridLayout = WidthProvider(RGL);
 
 /**
- * Example demonstrating cross-grid drag and drop.
+ * Example demonstrating drag and drop between grids.
  * Items can be dragged between multiple grids with different configurations.
  */
 export default class CrossGridDrag extends React.Component {
@@ -53,8 +53,8 @@ export default class CrossGridDrag extends React.Component {
   };
 
   // Predicate function: Grid 3 only accepts items from Grid 1, not Grid 2
-  grid3AcceptsDropPredicate = (item, sourceGridId) => {
-    return sourceGridId === "grid-1";
+  grid3AcceptsDropPredicate = (item, sourceId) => {
+    return sourceId === "grid-1";
   };
 
   render() {
@@ -129,7 +129,7 @@ export default class CrossGridDrag extends React.Component {
           <li><strong>Green solid outline:</strong> Source grid when you drag the item back over it</li>
         </ul>
 
-        <CrossGridProvider>
+        <DragDropProvider>
           <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
             {/* Grid 1 - 12 columns, 30px rows */}
             <div style={{ flex: "1 1 calc(33.333% - 20px)", minWidth: "300px", border: "2px solid #ddd", padding: "10px" }}>
@@ -200,7 +200,7 @@ export default class CrossGridDrag extends React.Component {
               </ReactGridLayout>
             </div>
           </div>
-        </CrossGridProvider>
+        </DragDropProvider>
       </div>
     );
   }

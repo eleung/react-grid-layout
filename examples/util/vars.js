@@ -190,4 +190,13 @@ module.exports = [
       "Items stay in their source grid during drag and show a placeholder in the target grid."
     ]
   },
+  {
+    title: "External Droppable Containers",
+    source: "external-droppable",
+    paragraphs: [
+      "This demonstrates how to drag items from grids to external drop zones using the Droppable component.",
+      "Items can be dropped into collection zones, trash zones, or any custom container.",
+      "Drop zones provide automatic CSS class management and drag event callbacks for complete control."
+    ]
+  },
 ];

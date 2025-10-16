@@ -4,8 +4,10 @@
 
 ### New Features
 
-- **Cross-Grid Drag and Drop**: Items can now be dragged between multiple grid instances.
-  - New `<CrossGridProvider>` component to enable cross-grid functionality
+- **Drag and Drop System**: Comprehensive drag and drop support for both grids and external containers.
+
+  **Cross-Grid Drag and Drop**: Items can now be dragged between multiple grid instances.
+  - New `<DragDropProvider>` component to enable drag and drop functionality
   - New `enableCrossGridDrag` prop to opt-in to cross-grid dragging
   - New `crossGridAcceptsDrop` prop (boolean or predicate function) for conditional drop acceptance
   - New `crossGridTransform` prop for custom item transformations between grids
@@ -17,6 +19,55 @@
     - Accept only certain item types
     - Conditional acceptance based on grid state
   - See [example #22](https://react-grid-layout.github.io/react-grid-layout/examples/22-cross-grid-drag.html)
+
+  **External Droppable Containers**: Items can now be dragged from grids to custom external drop zones.
+  - New `<Droppable>` component for creating custom drop targets outside grids
+  - Automatic CSS class management (`.drop-active`, `.drop-source`)
+  - Full drag event lifecycle callbacks: `onDragEnter`, `onDragOver`, `onDragLeave`, `onDrop`
+  - Render prop pattern for maximum flexibility with access to:
+    - `isActive`: Whether mouse is currently over this drop zone
+    - `isSource`: Whether this is the drag source
+    - `draggedItem`: The currently dragged item
+    - `mouseX`, `mouseY`: Real-time mouse position for custom placeholders
+  - Predicate support via `acceptsDrop` prop (boolean or function)
+  - Live placeholder positioning with `onDragOver` called on every mouse move
+  - Same smart collapse behavior as cross-grid drag
+  - Perfect for trash zones, collection zones, toolboxes, and custom workflows
+  - See [example #23](https://react-grid-layout.github.io/react-grid-layout/examples/23-external-droppable.html)
+
+### Breaking Changes
+
+- **API Renamed for Semantic Clarity**:
+  - `CrossGridProvider` → `DragDropProvider`
+  - `CrossGridContext` → `DragDropContext`
+  - Predicate function parameter `sourceGridId` → `sourceId`
+
+  **Migration Guide**:
+  ```js
+  // Before
+  import { CrossGridProvider } from 'react-grid-layout';
+
+  <CrossGridProvider>
+    <GridLayout
+      crossGridAcceptsDrop={(item, sourceGridId) => sourceGridId === "grid-1"}
+    />
+  </CrossGridProvider>
+
+  // After
+  import { DragDropProvider } from 'react-grid-layout';
+
+  <DragDropProvider>
+    <GridLayout
+      crossGridAcceptsDrop={(item, sourceId) => sourceId === "grid-1"}
+    />
+  </DragDropProvider>
+  ```
+
+### New Exports
+
+- `DragDropProvider` - Main provider for drag and drop functionality
+- `DragDropContext` - Context for accessing drag and drop state
+- `Droppable` - Component for creating external drop targets
 
 ## 1.5.2 (Jun 25, 2025)
 
