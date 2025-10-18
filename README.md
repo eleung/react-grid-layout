@@ -29,11 +29,14 @@ RGL is React-only and does not require jQuery.
   - [Cross-Grid Drag and Drop](#cross-grid-drag-and-drop)
   - [External Droppable Containers](#external-droppable-containers)
 - [Responsive Usage](#responsive-usage)
+- [Flex Layout Usage](#flex-layout-usage)
 - [Providing Grid Width](#providing-grid-width)
 - [Grid Layout Props](#grid-layout-props)
 - [Droppable Props](#droppable-props)
 - [Responsive Grid Layout Props](#responsive-grid-layout-props)
 - [Grid Item Props](#grid-item-props)
+- [Flex Layout Props](#flex-layout-props)
+- [Flex Item Props](#flex-item-props)
 - [User Recipes](../../wiki/Users-recipes)
 - [Performance](#performance)
 - [Contribute](#contribute)
@@ -65,6 +68,8 @@ RGL is React-only and does not require jQuery.
 1. [Single Row Horizontal](https://react-grid-layout.github.io/react-grid-layout/examples/21-horizontal.html)
 1. [Cross-Grid Drag and Drop](https://react-grid-layout.github.io/react-grid-layout/examples/22-cross-grid-drag.html)
 1. [External Droppable Containers](https://react-grid-layout.github.io/react-grid-layout/examples/23-external-droppable.html)
+1. [Basic Flex Layout](https://react-grid-layout.github.io/react-grid-layout/examples/24-basic-flex.html)
+1. [Flex Layout Directions](https://react-grid-layout.github.io/react-grid-layout/examples/25-flex-directions.html)
 
 #### Projects Using React-Grid-Layout
 
@@ -104,6 +109,11 @@ _Know of others? Create a PR to let me know!_
 - Separate layouts per responsive breakpoint
 - **Drag and drop between grids** - Drag items between multiple grid instances
 - **External droppable containers** - Drag items to custom drop zones outside grids
+- **Flex layout support** - Alternative layout system using CSS Flexbox
+  - Draggable flex items with smooth reordering
+  - Full flexbox property support (direction, justifyContent, alignItems, gap)
+  - Individual flex item properties (order, grow, shrink, basis, alignSelf)
+  - Visual feedback and animations during drag
 - Grid Items placed using CSS Transforms
   - Performance with CSS Transforms: [on](http://i.imgur.com/FTogpLp.jpg) / [off](http://i.imgur.com/gOveMm8.jpg), note paint (green) as % of time
 - Compatibility with `<React.StrictMode>`
@@ -405,6 +415,106 @@ You will also need to provide a `width`, when using `<ResponsiveReactGridLayout>
 
 It is possible to supply default mappings via the `data-grid` property on individual
 items, so that they would be taken into account within layout interpolation.
+
+## Flex Layout Usage
+
+`ReactFlexLayout` is an alternative layout component that uses CSS Flexbox instead of a grid system. It's ideal for layouts where items should flow naturally and adapt to content, while still supporting drag-and-drop reordering.
+
+### Basic Flex Layout
+
+```js
+import { ReactFlexLayout } from "react-grid-layout";
+
+class MyFlexLayout extends React.Component {
+  render() {
+    // layout is an array of objects with flex properties
+    const layout = [
+      { i: "a", order: 0, grow: 0, shrink: 1, basis: "150px" },
+      { i: "b", order: 1, grow: 1, shrink: 1, basis: "auto" },
+      { i: "c", order: 2, grow: 0, shrink: 1, basis: "150px" }
+    ];
+
+    return (
+      <ReactFlexLayout
+        layout={layout}
+        direction="row"
+        justifyContent="flex-start"
+        alignItems="stretch"
+        gap={10}
+        width={1200}
+      >
+        <div key="a">Fixed width item</div>
+        <div key="b">Flexible item</div>
+        <div key="c">Fixed width item</div>
+      </ReactFlexLayout>
+    );
+  }
+}
+```
+
+### Using WidthProvider with Flex Layout
+
+Like `ReactGridLayout`, `ReactFlexLayout` also works with `WidthProvider`:
+
+```js
+import { ReactFlexLayout, WidthProvider } from "react-grid-layout";
+
+const FlexLayout = WidthProvider(ReactFlexLayout);
+
+class MyResponsiveFlexLayout extends React.Component {
+  render() {
+    const layout = [
+      { i: "a", order: 0, grow: 0, shrink: 1, basis: "200px" },
+      { i: "b", order: 1, grow: 1, shrink: 1, basis: "auto" },
+      { i: "c", order: 2, grow: 0, shrink: 1, basis: "200px" }
+    ];
+
+    return (
+      <FlexLayout
+        layout={layout}
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        gap={15}
+      >
+        <div key="a">a</div>
+        <div key="b">b</div>
+        <div key="c">c</div>
+      </FlexLayout>
+    );
+  }
+}
+```
+
+### Flex Item Properties via data-flex
+
+You can also define flex properties directly on children:
+
+```js
+<ReactFlexLayout
+  direction="row"
+  gap={10}
+  width={1200}
+>
+  <div key="a" data-flex={{ order: 0, grow: 0, shrink: 1, basis: "150px" }}>
+    a
+  </div>
+  <div key="b" data-flex={{ order: 1, grow: 1, shrink: 1, basis: "auto" }}>
+    b
+  </div>
+  <div key="c" data-flex={{ order: 2, grow: 0, shrink: 1, basis: "150px" }}>
+    c
+  </div>
+</ReactFlexLayout>
+```
+
+### Key Differences from Grid Layout
+
+- **Layout Properties**: Uses flex properties (`order`, `grow`, `shrink`, `basis`) instead of grid coordinates (`x`, `y`, `w`, `h`)
+- **Container Properties**: Supports flexbox container properties (`direction`, `justifyContent`, `alignItems`, `gap`)
+- **No Resizing**: Flex items are not resizable; size is controlled by flex properties
+- **Reordering**: Drag and drop changes the `order` property rather than position coordinates
+- **Visual Flow**: Items flow naturally according to flexbox rules rather than being absolutely positioned
 
 ### Providing Grid Width
 
@@ -826,6 +936,192 @@ For example, with `rowHeight=30`, `margin=[10,10]` and a unit with height 4, the
 ![margin](margin.png)
 
 If this is a problem for you, set `margin=[0,0]` and handle visual spacing between your elements inside the elements' content.
+
+## Flex Layout Props
+
+`ReactFlexLayout` supports the following properties:
+
+```js
+//
+// Basic props
+//
+
+// Container width in pixels. Required unless using WidthProvider.
+width: number,
+
+// If true, the container height swells and contracts to fit contents
+autoSize: ?boolean = true,
+
+// CSS class name
+className: ?string = "",
+
+// Inline styles
+style: ?Object = {},
+
+//
+// Flexbox container props
+//
+
+// Flex direction: "row", "column", "row-reverse", "column-reverse"
+direction: ?FlexDirection = "row",
+
+// Flex justify-content: "flex-start", "flex-end", "center", "space-between", "space-around", "space-evenly"
+justifyContent: ?FlexJustifyContent = "flex-start",
+
+// Flex align-items: "flex-start", "flex-end", "center", "stretch", "baseline"
+alignItems: ?FlexAlignItems = "stretch",
+
+// Gap between items in pixels
+gap: ?number = 0,
+
+//
+// Draggability
+//
+
+// A CSS selector for tags that will not be draggable
+draggableCancel: ?string = "",
+
+// A CSS selector for tags that will act as the draggable handle
+draggableHandle: ?string = "",
+
+// Layout is an array of objects with the format:
+// {i: string, order: number, grow: number, shrink: number, basis: string|number}
+// The i property must match the key used on each item component.
+layout: ?FlexLayout = [],
+
+//
+// Flags
+//
+
+// If true, items can be dragged
+isDraggable: ?boolean = true,
+
+// If true, items will be kept within container bounds during drag
+isBounded: ?boolean = false,
+
+// If true, droppable elements can be dropped on the layout
+isDroppable: ?boolean = false,
+
+// Uses CSS3 translate() instead of position top/left for better performance
+useCSSTransforms: ?boolean = true,
+
+// Scale coefficient if parent has "transform: scale(n)" CSS property
+transformScale: ?number = 1,
+
+//
+// Cross-Grid Drag and Drop (same as GridLayout)
+//
+
+// Unique identifier for this flex layout instance
+id: ?string,
+
+// If true, enables cross-grid drag and drop functionality
+enableCrossGridDrag: ?boolean = false,
+
+// Controls whether this flex layout accepts items dropped from other layouts
+// Can be a boolean or a predicate function:
+//   (item: FlexLayoutItem, sourceId: string) => boolean
+crossGridAcceptsDrop: ?(boolean | (item: FlexLayoutItem, sourceId: string) => boolean) = true,
+
+//
+// Callbacks
+//
+
+// Called after every drag or reorder with the new layout
+onLayoutChange: (layout: FlexLayout) => void,
+
+// Callback signature: (layout, oldItem, newItem, placeholder, e, element)
+type FlexItemCallback = (
+  layout: FlexLayout,
+  oldItem: ?FlexLayoutItem,
+  newItem: ?FlexLayoutItem,
+  placeholder: ?FlexLayoutItem,
+  e: Event,
+  element: HTMLElement
+) => void,
+
+// Called when drag starts
+onDragStart: FlexItemCallback,
+
+// Called on each drag movement
+onDrag: FlexItemCallback,
+
+// Called when drag is complete
+onDragStop: FlexItemCallback,
+
+// Called when an element is dropped into the flex layout from outside
+onDrop: (layout: FlexLayout, item: ?FlexLayoutItem, e: Event) => void,
+
+// Ref for getting a reference to the flex container's wrapping div
+innerRef: {current: null | HTMLDivElement},
+```
+
+## Flex Item Props
+
+Flex layout items support the following properties. When initializing a flex layout,
+build a layout array, or attach this object as the `data-flex` property to each child element.
+
+```js
+{
+  // A string corresponding to the component key (required)
+  i: string,
+
+  // Flex order property (determines visual order)
+  order: number,
+
+  // Flex-grow (how much the item should grow relative to others)
+  grow: number,
+
+  // Flex-shrink (how much the item should shrink relative to others)
+  shrink: number,
+
+  // Flex-basis (initial size before growing/shrinking)
+  // Can be a string ("auto", "200px", "50%") or number (pixels)
+  basis: string | number,
+
+  // Override container's alignItems for this specific item
+  // "auto", "flex-start", "flex-end", "center", "stretch", "baseline"
+  alignSelf: ?FlexAlignSelf,
+
+  // Size constraints (in pixels)
+  minWidth: ?number,
+  maxWidth: ?number,
+  minHeight: ?number,
+  maxHeight: ?number,
+
+  // If true, item cannot be dragged (equal to isDraggable: false)
+  static: ?boolean = false,
+
+  // If false, item will not be draggable. Overrides `static`.
+  isDraggable: ?boolean = true,
+}
+```
+
+**Example Flex Layout Array:**
+
+```js
+const layout = [
+  // Fixed width item
+  { i: "sidebar", order: 0, grow: 0, shrink: 0, basis: "250px" },
+
+  // Flexible content area
+  { i: "content", order: 1, grow: 1, shrink: 1, basis: "auto" },
+
+  // Fixed width item with min/max constraints
+  {
+    i: "panel",
+    order: 2,
+    grow: 0,
+    shrink: 1,
+    basis: "300px",
+    minWidth: 200,
+    maxWidth: 400
+  },
+
+  // Static (non-draggable) item
+  { i: "footer", order: 3, grow: 0, shrink: 0, basis: "100px", static: true }
+];
+```
 
 ### Performance
 

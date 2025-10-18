@@ -117,3 +117,64 @@
   bottom: 0;
   transform: rotate(45deg);
 }
+
+/* ========================================
+   Flex Layout Styles
+   ======================================== */
+
+.react-flex-layout {
+  position: relative;
+  transition: height 200ms ease;
+}
+
+.react-flex-layout.react-flex-no-transition .react-flex-item:not(.react-flex-animating) {
+  /* Disable transitions except for animating item (dragged item on drop) */
+  transition: none !important;
+}
+
+.react-flex-item {
+  transition: all 200ms ease;
+  transition-property: order, flex-grow, flex-shrink, flex-basis;
+}
+
+.react-flex-item.cssTransforms {
+  transition-property: transform, order, flex-grow, flex-shrink, flex-basis;
+}
+
+.react-flex-item.react-draggable-dragging {
+  transition: none;
+  z-index: 3;
+  will-change: transform;
+}
+
+.react-flex-item.react-flex-animating {
+  transition: transform 200ms ease;
+  z-index: 3;
+}
+
+.react-flex-item.react-flex-no-transition {
+  transition: none !important;
+}
+
+.react-flex-item.dropping {
+  visibility: hidden;
+}
+
+.react-flex-item.react-flex-placeholder {
+  background: red;
+  opacity: 0.2;
+  transition-duration: 100ms;
+  z-index: 2;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+}
+
+.react-flex-item.react-flex-placeholder.placeholder-dragging {
+  transition: transform 200ms ease;
+}
+
+.react-flex-item.static {
+}

@@ -199,4 +199,24 @@ module.exports = [
       "Drop zones provide automatic CSS class management and drag event callbacks for complete control."
     ]
   },
+  {
+    title: "Basic Flex Layout",
+    source: "basic-flex",
+    paragraphs: [
+      "This demonstrates the new ReactFlexLayout component using flexbox for layout.",
+      "Items are arranged using flex properties (grow, shrink, basis) instead of grid coordinates.",
+      "Every third item has flex-grow: 1 to demonstrate flexible sizing.",
+      "Try dragging items around - they will animate back to their original positions on drop."
+    ]
+  },
+  {
+    title: "Flex Layout Directions",
+    source: "flex-directions",
+    paragraphs: [
+      "This interactive demo shows how ReactFlexLayout supports all flexbox properties.",
+      "Use the controls to change direction, justifyContent, alignItems properties.",
+      "Notice how the layout responds to different flex container settings.",
+      "Try dragging items - they smoothly return to their flex positions when dropped."
+    ]
+  },
 ];

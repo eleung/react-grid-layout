@@ -4,6 +4,20 @@
 
 ### New Features
 
+- **Flexbox Layout Component**: New `ReactFlexLayout` component providing an alternative to grid-based layouts.
+  - Uses CSS Flexbox instead of absolute positioning for natural, content-driven layouts
+  - Full support for flexbox container properties: `direction`, `justifyContent`, `alignItems`, `gap`
+  - Flex item properties: `order`, `grow`, `shrink`, `basis`, `alignSelf`
+  - Drag and drop reordering with smooth visual feedback and animations
+  - Size constraints via `minWidth`, `maxWidth`, `minHeight`, `maxHeight`
+  - Compatible with `WidthProvider` HOC for responsive layouts
+  - Smart collision detection and reordering based on cursor position
+  - Visual placeholder and transform-based animations during drag
+  - Works with both `layout` prop and `data-flex` attribute on children
+  - Static items support (non-draggable)
+  - Cross-grid drag and drop support (when wrapped in `DragDropProvider`)
+  - See [example #24](https://react-grid-layout.github.io/react-grid-layout/examples/24-basic-flex.html) and [example #25](https://react-grid-layout.github.io/react-grid-layout/examples/25-flex-directions.html)
+
 - **Drag and Drop System**: Comprehensive drag and drop support for both grids and external containers.
 
   **Cross-Grid Drag and Drop**: Items can now be dragged between multiple grid instances.
@@ -63,11 +77,22 @@
   </DragDropProvider>
   ```
 
+### API Design Notes
+
+- **Semantic Prop Naming**: Different layout components use semantically appropriate props:
+  - `ReactGridLayout` uses `data-grid` attribute for grid properties (x, y, w, h)
+  - `ReactFlexLayout` uses `data-flex` attribute for flex properties (order, grow, shrink, basis)
+  - This prevents confusion and enables better type safety
+
+- **Internal DOM Attributes**: Both layout systems use `data-rgl-item-id` for internal DOM-to-item matching
+
 ### New Exports
 
 - `DragDropProvider` - Main provider for drag and drop functionality
 - `DragDropContext` - Context for accessing drag and drop state
 - `Droppable` - Component for creating external drop targets
+- `ReactFlexLayout` - Flexbox-based layout component
+- `flexUtils` - Utility functions for flex layouts
 
 ## 1.5.2 (Jun 25, 2025)
 

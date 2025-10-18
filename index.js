@@ -14,3 +14,7 @@ module.exports.DragDropContext =
   require("./build/DragDropContext").default;
 module.exports.Droppable =
   require("./build/components/Droppable").default;
+
+// Flex layout exports
+module.exports.ReactFlexLayout = require("./build/ReactFlexLayout").default;
+module.exports.flexUtils = require("./build/flexUtils");
