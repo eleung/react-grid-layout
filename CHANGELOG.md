@@ -1,13 +1,14 @@
 # Changelog
 
-## Unreleased
+## 1.6.0 (Oct 20, 2025)
 
 ### New Features
 
 - **Flexbox Layout Component**: New `ReactFlexLayout` component providing an alternative to grid-based layouts.
   - Uses CSS Flexbox instead of absolute positioning for natural, content-driven layouts
   - Full support for flexbox container properties: `direction`, `justifyContent`, `alignItems`, `gap`
-  - Flex item properties: `order`, `grow`, `shrink`, `basis`, `alignSelf`
+  - Flex item properties: `order`, `grow`, `shrink`, `alignSelf`
+  - **Note**: `basis` prop has been removed; flex sizing is controlled purely by `grow` and `shrink`
   - Drag and drop reordering with smooth visual feedback and animations
   - Size constraints via `minWidth`, `maxWidth`, `minHeight`, `maxHeight`
   - Compatible with `WidthProvider` HOC for responsive layouts
@@ -49,6 +50,17 @@
   - Perfect for trash zones, collection zones, toolboxes, and custom workflows
   - See [example #23](https://react-grid-layout.github.io/react-grid-layout/examples/23-external-droppable.html)
 
+  **Cross-Layout Drag and Drop (Grid ↔ Flex)**: Items can now be dragged between grid and flex layouts seamlessly.
+  - Automatic item transformation between layout types:
+    - Grid → Flex: Converts `{x,y,w,h}` coordinates to pixel dimensions `{width,height}`
+    - Flex → Grid: Converts pixel dimensions to grid units based on `cols` and `rowHeight`
+    - Flex → Flex: Preserves flex properties (`order`, `grow`, `shrink`, `alignSelf`)
+  - Smart constraint conversion automatically converts `minW/maxW/minH/maxH` ↔ `minWidth/maxWidth/minHeight/maxHeight`
+  - Visual placeholder rendering for external items being dragged into flex layouts
+  - Conditional drop acceptance via predicate functions works across all layout types
+  - New `renderDroppingItem` prop for `ReactFlexLayout` to customize external item appearance
+  - See [example #26](https://react-grid-layout.github.io/react-grid-layout/examples/26-grid-flex-drag.html), [example #27](https://react-grid-layout.github.io/react-grid-layout/examples/27-flex-droppable.html), and [example #28](https://react-grid-layout.github.io/react-grid-layout/examples/28-comprehensive-drag.html)
+
 ### Breaking Changes
 
 - **API Renamed for Semantic Clarity**:
@@ -81,7 +93,7 @@
 
 - **Semantic Prop Naming**: Different layout components use semantically appropriate props:
   - `ReactGridLayout` uses `data-grid` attribute for grid properties (x, y, w, h)
-  - `ReactFlexLayout` uses `data-flex` attribute for flex properties (order, grow, shrink, basis)
+  - `ReactFlexLayout` uses `data-flex` attribute for flex properties (order, grow, shrink, alignSelf)
   - This prevents confusion and enables better type safety
 
 - **Internal DOM Attributes**: Both layout systems use `data-rgl-item-id` for internal DOM-to-item matching

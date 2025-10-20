@@ -628,7 +628,8 @@ You can also define flex properties directly on children:
 
 ### Key Differences from Grid Layout
 
-- **Layout Properties**: Uses flex properties (`order`, `grow`, `shrink`, `basis`) instead of grid coordinates (`x`, `y`, `w`, `h`)
+- **Layout Properties**: Uses flex properties (`order`, `grow`, `shrink`) instead of grid coordinates (`x`, `y`, `w`, `h`)
+- **Sizing**: Items are sized using `grow` and `shrink` with optional size constraints (`minWidth`, `maxWidth`, `minHeight`, `maxHeight`)
 - **Container Properties**: Supports flexbox container properties (`direction`, `justifyContent`, `alignItems`, `gap`)
 - **No Resizing**: Flex items are not resizable; size is controlled by flex properties
 - **Reordering**: Drag and drop changes the `order` property rather than position coordinates
@@ -1103,9 +1104,9 @@ draggableCancel: ?string = "",
 draggableHandle: ?string = "",
 
 // Layout is an array of objects with the format:
-// {i: string, order: number, grow: number, shrink: number, basis?: string|number}
+// {i: string, order: number, grow: number, shrink: number}
 // The i property must match the key used on each item component.
-// Note: basis is optional; if not specified, defaults to 'auto'
+// Item sizing is controlled by grow/shrink and optional size constraints (minWidth, maxWidth, etc)
 layout: ?FlexLayout = [],
 
 //
@@ -1204,11 +1205,6 @@ build a layout array, or attach this object as the `data-flex` property to each 
   // Flex-shrink (how much the item should shrink relative to others)
   shrink: number,
 
-  // Flex-basis (initial size before growing/shrinking) - OPTIONAL
-  // Can be a string ("auto", "200px", "50%") or number (pixels)
-  // If not specified, defaults to 'auto'
-  basis: ?(string | number),
-
   // Override container's alignItems for this specific item
   // "auto", "flex-start", "flex-end", "center", "stretch", "baseline"
   alignSelf: ?FlexAlignSelf,
@@ -1232,10 +1228,10 @@ build a layout array, or attach this object as the `data-flex` property to each 
 
 ```js
 const layout = [
-  // Fixed width item (with explicit basis)
-  { i: "sidebar", order: 0, grow: 0, shrink: 0, basis: "250px" },
+  // Fixed width item with size constraints
+  { i: "sidebar", order: 0, grow: 0, shrink: 0, minWidth: 250, maxWidth: 250 },
 
-  // Flexible content area (basis optional, defaults to 'auto')
+  // Flexible content area (grows to fill space)
   { i: "content", order: 1, grow: 1, shrink: 1 },
 
   // Item with min/max constraints (automatically applied during cross-layout drag)
@@ -1244,13 +1240,12 @@ const layout = [
     order: 2,
     grow: 0,
     shrink: 1,
-    basis: "300px",
     minWidth: 200,
     maxWidth: 400
   },
 
-  // Static (non-draggable) item
-  { i: "footer", order: 3, grow: 0, shrink: 0, basis: "100px", static: true }
+  // Static (non-draggable) item with fixed size
+  { i: "footer", order: 3, grow: 0, shrink: 0, minHeight: 100, maxHeight: 100, static: true }
 ];
 ```
 
