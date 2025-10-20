@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>React Grid Layout - Examples</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 40px;
+    }
+
+    h1 {
+      font-size: 36px;
+      color: #333;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      font-size: 18px;
+      margin-bottom: 40px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+
+    .new-badge {
+      background: #48bb78;
+    }
+
+    .section {
+      margin-bottom: 40px;
+    }
+
+    .section h2 {
+      font-size: 24px;
+      color: #444;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .examples-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .example-card {
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .example-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+      border-color: #667eea;
+    }
+
+    .example-number {
+      font-size: 14px;
+      color: #999;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .example-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .example-desc {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    .links {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 40px;
+      border-top: 2px solid #e2e8f0;
+    }
+
+    .links a {
+      display: inline-block;
+      margin: 0 15px;
+      padding: 12px 30px;
+      background: #667eea;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      transition: background 0.3s ease;
+    }
+
+    .links a:hover {
+      background: #5a67d8;
+    }
+
+    .secondary-link {
+      background: #48bb78 !important;
+    }
+
+    .secondary-link:hover {
+      background: #38a169 !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>@eleung/react-grid-layout</h1>
+    <p class="subtitle">
+      A draggable and resizable grid layout with responsive breakpoints for React
+      <span class="badge">v1.6.1</span>
+    </p>
+
+    <div class="section">
+      <h2>🎯 New Features <span class="badge new-badge">v1.6.0</span></h2>
+      <div class="examples-grid">
+        <a href="examples/24-basic-flex.html" class="example-card">
+          <div class="example-number">Example #24</div>
+          <div class="example-title">Basic Flex Layout</div>
+          <div class="example-desc">Introduction to ReactFlexLayout with flexbox-based layouts</div>
+        </a>
+
+        <a href="examples/25-flex-directions.html" class="example-card">
+          <div class="example-number">Example #25</div>
+          <div class="example-title">Flex Layout Directions</div>
+          <div class="example-desc">Explore different flex directions and alignment options</div>
+        </a>
+
+        <a href="examples/26-grid-flex-drag.html" class="example-card">
+          <div class="example-number">Example #26 <span class="badge new-badge">NEW</span></div>
+          <div class="example-title">Grid ↔ Flex Drag and Drop</div>
+          <div class="example-desc">Drag items between grids and flex layouts with automatic transformation</div>
+        </a>
+
+        <a href="examples/27-flex-droppable.html" class="example-card">
+          <div class="example-number">Example #27 <span class="badge new-badge">NEW</span></div>
+          <div class="example-title">Flex ↔ Flex + Droppable</div>
+          <div class="example-desc">Flex layouts with external droppable containers</div>
+        </a>
+
+        <a href="examples/28-comprehensive-drag.html" class="example-card">
+          <div class="example-number">Example #28 <span class="badge new-badge">NEW</span></div>
+          <div class="example-title">Comprehensive Drag & Drop</div>
+          <div class="example-desc">All drag combinations: Grid↔Grid, Flex↔Flex, Grid↔Flex, all→External</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>📚 All Examples</h2>
+      <div class="examples-grid">
+        <a href="examples/00-showcase.html" class="example-card">
+          <div class="example-number">Example #0</div>
+          <div class="example-title">Showcase</div>
+          <div class="example-desc">Feature overview and demonstration</div>
+        </a>
+
+        <a href="examples/01-basic.html" class="example-card">
+          <div class="example-number">Example #1</div>
+          <div class="example-title">Basic</div>
+          <div class="example-desc">Simple grid with draggable and resizable items</div>
+        </a>
+
+        <a href="examples/02-no-dragging.html" class="example-card">
+          <div class="example-number">Example #2</div>
+          <div class="example-title">No Dragging/Resizing</div>
+          <div class="example-desc">Layout only, no interaction</div>
+        </a>
+
+        <a href="examples/03-messy.html" class="example-card">
+          <div class="example-number">Example #3</div>
+          <div class="example-title">Messy Layout Autocorrect</div>
+          <div class="example-desc">Automatic layout correction and compaction</div>
+        </a>
+
+        <a href="examples/04-grid-property.html" class="example-card">
+          <div class="example-number">Example #4</div>
+          <div class="example-title">Layout Defined on Children</div>
+          <div class="example-desc">Using data-grid attribute</div>
+        </a>
+
+        <a href="examples/05-static-elements.html" class="example-card">
+          <div class="example-number">Example #5</div>
+          <div class="example-title">Static Elements</div>
+          <div class="example-desc">Mix of movable and fixed items</div>
+        </a>
+
+        <a href="examples/06-dynamic-add-remove.html" class="example-card">
+          <div class="example-number">Example #6</div>
+          <div class="example-title">Adding/Removing Elements</div>
+          <div class="example-desc">Dynamic item management</div>
+        </a>
+
+        <a href="examples/07-localstorage.html" class="example-card">
+          <div class="example-number">Example #7</div>
+          <div class="example-title">Saving Layout to LocalStorage</div>
+          <div class="example-desc">Persist layouts across sessions</div>
+        </a>
+
+        <a href="examples/08-localstorage-responsive.html" class="example-card">
+          <div class="example-number">Example #8</div>
+          <div class="example-title">Responsive LocalStorage</div>
+          <div class="example-desc">Save responsive layouts</div>
+        </a>
+
+        <a href="examples/09-min-max-wh.html" class="example-card">
+          <div class="example-number">Example #9</div>
+          <div class="example-title">Min/Max Width/Height</div>
+          <div class="example-desc">Size constraints on items</div>
+        </a>
+
+        <a href="examples/10-dynamic-min-max-wh.html" class="example-card">
+          <div class="example-number">Example #10</div>
+          <div class="example-title">Dynamic Min/Max</div>
+          <div class="example-desc">Change constraints dynamically</div>
+        </a>
+
+        <a href="examples/11-no-vertical-compact.html" class="example-card">
+          <div class="example-number">Example #11</div>
+          <div class="example-title">No Vertical Compacting</div>
+          <div class="example-desc">Free movement without auto-packing</div>
+        </a>
+
+        <a href="examples/12-prevent-collision.html" class="example-card">
+          <div class="example-number">Example #12</div>
+          <div class="example-title">Prevent Collision</div>
+          <div class="example-desc">Items can't overlap or move others</div>
+        </a>
+
+        <a href="examples/13-error-case.html" class="example-card">
+          <div class="example-number">Example #13</div>
+          <div class="example-title">Error Case</div>
+          <div class="example-desc">Error handling demonstration</div>
+        </a>
+
+        <a href="examples/14-toolbox.html" class="example-card">
+          <div class="example-number">Example #14</div>
+          <div class="example-title">Toolbox</div>
+          <div class="example-desc">Drag items from a toolbox</div>
+        </a>
+
+        <a href="examples/15-drag-from-outside.html" class="example-card">
+          <div class="example-number">Example #15</div>
+          <div class="example-title">Drag From Outside</div>
+          <div class="example-desc">Add items by dragging from external source</div>
+        </a>
+
+        <a href="examples/16-bounded.html" class="example-card">
+          <div class="example-number">Example #16</div>
+          <div class="example-title">Bounded Layout</div>
+          <div class="example-desc">Items constrained within container</div>
+        </a>
+
+        <a href="examples/17-responsive-bootstrap-style.html" class="example-card">
+          <div class="example-number">Example #17</div>
+          <div class="example-title">Responsive Bootstrap-style</div>
+          <div class="example-desc">Bootstrap-like breakpoints</div>
+        </a>
+
+        <a href="examples/18-scale.html" class="example-card">
+          <div class="example-number">Example #18</div>
+          <div class="example-title">Scaled Containers</div>
+          <div class="example-desc">Transform scale support</div>
+        </a>
+
+        <a href="examples/19-allow-overlap.html" class="example-card">
+          <div class="example-number">Example #19</div>
+          <div class="example-title">Allow Overlap</div>
+          <div class="example-desc">Items can overlap each other</div>
+        </a>
+
+        <a href="examples/20-resizable-handles.html" class="example-card">
+          <div class="example-number">Example #20</div>
+          <div class="example-title">All Resizable Handles</div>
+          <div class="example-desc">8 directional resize handles</div>
+        </a>
+
+        <a href="examples/21-horizontal.html" class="example-card">
+          <div class="example-number">Example #21</div>
+          <div class="example-title">Single Row Horizontal</div>
+          <div class="example-desc">Horizontal compaction mode</div>
+        </a>
+
+        <a href="examples/22-cross-grid-drag.html" class="example-card">
+          <div class="example-number">Example #22</div>
+          <div class="example-title">Cross-Grid Drag and Drop</div>
+          <div class="example-desc">Drag items between multiple grids</div>
+        </a>
+
+        <a href="examples/23-external-droppable.html" class="example-card">
+          <div class="example-number">Example #23</div>
+          <div class="example-title">External Droppable Containers</div>
+          <div class="example-desc">Custom drop zones outside grids</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="links">
+      <a href="https://github.com/eleung/react-grid-layout">GitHub Repository</a>
+      <a href="https://www.npmjs.com/package/@eleung/react-grid-layout" class="secondary-link">npm Package</a>
+    </div>
+  </div>
+</body>
+</html>
