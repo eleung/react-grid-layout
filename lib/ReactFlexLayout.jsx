@@ -117,6 +117,8 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
   originalOrder: Array<string> = [];
   // Timeout for re-enabling transitions after drop
   transitionTimeout: ?TimeoutID = null;
+  // Store mouse position when external item is first added (for calculating initial order after bounds collection)
+  pendingExternalMousePosition: ?{ mouseX: number, mouseY: number } = null;
 
   componentDidMount() {
     this.setState({ mounted: true });
@@ -274,6 +276,7 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
 
   /**
    * Helper: Collect bounds if external item was just added to layout
+   * After bounds are collected, calculate initial order and apply transforms
    */
   collectBoundsIfExternalItemAdded = (prevState: State): void => {
     if (!this.props.enableCrossGridDrag) return;
@@ -284,7 +287,51 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
     // External item was just added or changed - collect bounds after DOM is painted
     if ((currentExternalItem && !prevExternalItem) ||
         (currentExternalItem && prevExternalItem && currentExternalItem.i !== prevExternalItem.i)) {
-      this.scheduleCollectBounds();
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          // Collect bounds with external item now in DOM
+          this.collectItemBounds();
+
+          // Now calculate initial order based on mouse position
+          if (this.pendingExternalMousePosition && currentExternalItem) {
+            const { mouseX, mouseY } = this.pendingExternalMousePosition;
+            const initialOrder = this.calculateInitialOrderForExternalItem(mouseX, mouseY);
+            const externalId = currentExternalItem.i;
+
+            // Calculate visual order with external item inserted at calculated position
+            const newOrderArray = [...this.originalOrder];
+            // Remove external item from its current position in originalOrder (it's at the end)
+            const currentIndex = newOrderArray.indexOf(externalId);
+            if (currentIndex !== -1) {
+              newOrderArray.splice(currentIndex, 1);
+            }
+            // Insert at calculated position
+            newOrderArray.splice(initialOrder, 0, externalId);
+
+            // Get external item's bounds for transform calculation
+            const draggedRect = this.itemBounds.get(externalId);
+            if (draggedRect) {
+              // Calculate transforms to visually position items
+              const transforms = this.calculateTransforms(externalId, newOrderArray, draggedRect);
+
+              // Apply transforms and set visual order
+              this.setState({
+                transforms: new Map(transforms),
+                currentOrder: newOrderArray
+              });
+            }
+
+            // Clear pending mouse position
+            this.pendingExternalMousePosition = null;
+
+            // Re-enable transitions after a brief delay
+            this.scheduleReEnableTransitions();
+          }
+
+          this.forceUpdate();
+        });
+      });
     }
   };
 
@@ -401,6 +448,7 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
 
     const externalId = this.state.activeDrag.i;
     this.itemBounds.delete(externalId);
+    this.pendingExternalMousePosition = null;  // Clear pending mouse position
 
     this.setState({
       activeDrag: null,
@@ -526,23 +574,18 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
 
   /**
    * Helper: Add external item to layout for the first time
+   * This just adds the item to layout - bounds collection and visual reordering happens in componentDidUpdate
    */
   addExternalItemToLayout = (transformedItem: FlexLayoutItem, mouseX: number, mouseY: number): void => {
-    // Ensure we have bounds for existing items before calculating insertion point
-    if (this.itemBounds.size === 0) {
-      this.collectItemBounds();
-    }
-
     // Save original layout (filter out any existing external items)
     const oldLayout = this.state.oldLayout ||
       this.state.layout.filter(item => !item.i.startsWith("__external__"));
 
-    const initialOrder = this.calculateInitialOrderForExternalItem(mouseX, mouseY);
     const externalId = `__external__${transformedItem.i}`;
 
     const externalItem: FlexLayoutItem = {
       i: externalId,
-      order: initialOrder,
+      order: this.state.layout.length,  // Append to end to avoid order conflicts
       grow: transformedItem.grow !== undefined ? transformedItem.grow : 0,
       shrink: transformedItem.shrink !== undefined ? transformedItem.shrink : 1,
       alignSelf: transformedItem.alignSelf,
@@ -553,21 +596,19 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
       placeholder: true
     };
 
-    // Increment orders of items at/after insertion point to make room
-    const updatedLayout = this.state.layout.map(item => {
-      if (item.order >= initialOrder) {
-        return { ...item, order: item.order + 1 };
-      }
-      return item;
-    });
+    // Just add external item to layout
+    // Don't calculate transforms yet - that happens after bounds are collected
+    const newLayout = [...this.state.layout, externalItem];
 
-    const newLayout = [...updatedLayout, externalItem];
+    // Store mouse position for later use in bounds collection phase
+    this.pendingExternalMousePosition = { mouseX, mouseY };
 
     this.setState({
       layout: newLayout,
       activeDrag: externalItem,
       oldLayout: oldLayout,
-      isDropActive: true
+      isDropActive: true,
+      disableTransitions: false  // Allow other items to transition when external item inserted
     });
   };
 
@@ -639,53 +680,49 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
 
   /**
    * Calculate initial order for external item based on mouse position
-   * Uses same gap-extended collision detection as calculateNewOrder for consistency
+   * Uses same zone collision logic as calculateNewOrder for consistency
    */
   calculateInitialOrderForExternalItem = (mouseX: number, mouseY: number): number => {
+    // If no items yet, start at 0
+    if (this.originalOrder.length === 0) return 0;
+
+    // Use same collision detection as calculateNewOrder
+    // This ensures consistent behavior between initial insertion and subsequent updates
+    const hoveredItemId = this.findItemAtPosition(mouseX, mouseY);
+
+    if (hoveredItemId) {
+      // Insert at the hovered item's position
+      const targetIndex = this.originalOrder.indexOf(hoveredItemId);
+      return targetIndex;
+    }
+
+    // No collision - check if before first or after last item
+    // This matches the logic in calculateNewOrder
     const { direction, gap } = this.props;
     const isHorizontal = direction === 'row' || direction === 'row-reverse';
     const halfGap = gap / 2;
 
-    // If no items yet, start at 0
-    if (this.originalOrder.length === 0) return 0;
+    const firstId = this.originalOrder[0];
+    const lastId = this.originalOrder[this.originalOrder.length - 1];
+    const firstRect = this.itemBounds.get(firstId);
+    const lastRect = this.itemBounds.get(lastId);
 
-    // Check if we have any valid bounds (guards against race conditions)
-    let hasAnyBounds = false;
+    if (firstRect && lastRect) {
+      const firstBound = isHorizontal ? firstRect.left - halfGap : firstRect.top - halfGap;
+      const lastBound = isHorizontal ? lastRect.right + halfGap : lastRect.bottom + halfGap;
+      const cursorPos = isHorizontal ? mouseX : mouseY;
 
-    // Find insertion point using gap-extended collision detection
-    // This matches the logic in calculateNewOrder for consistent behavior
-    for (let i = 0; i < this.originalOrder.length; i++) {
-      const itemId = this.originalOrder[i];
-      const bounds = this.itemBounds.get(itemId);
-      if (!bounds) continue;
-
-      hasAnyBounds = true;
-
-      // Extend bounds by halfGap in main axis (same as calculateNewOrder)
-      const left = bounds.left - (isHorizontal ? halfGap : 0);
-      const right = bounds.right + (isHorizontal ? halfGap : 0);
-      const top = bounds.top - (isHorizontal ? 0 : halfGap);
-      const bottom = bounds.bottom + (isHorizontal ? 0 : halfGap);
-
-      // Check if mouse is in the left/top half of this item's extended zone
-      const itemMidpoint = isHorizontal
-        ? left + ((right - left) / 2)
-        : top + ((bottom - top) / 2);
-      const mousePos = isHorizontal ? mouseX : mouseY;
-
-      if (mousePos < itemMidpoint) {
-        // Insert before this item
-        return i;
+      if (cursorPos < firstBound) {
+        // Before first item
+        return 0;
+      }
+      if (cursorPos > lastBound) {
+        // After last item
+        return this.originalOrder.length;
       }
     }
 
-    // If no bounds were found (race condition), default to position 0
-    // This is safer than inserting at the end with no visual feedback
-    if (!hasAnyBounds) {
-      return 0;
-    }
-
-    // Mouse is after all items, insert at end
+    // In a gap between items - default to end (safer than position 0)
     return this.originalOrder.length;
   };
 
@@ -807,6 +844,10 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
     items.forEach((item: HTMLElement) => {
       const itemId = item.getAttribute('data-rgl-item-id');
       if (itemId) {
+        // Skip external items - they stay in flex flow with opacity: 0
+        // We must preserve their originally collected flexed bounds
+        if (itemId.startsWith('__external__')) return;
+
         const existingBounds = this.itemBounds.get(itemId);
         if (existingBounds) {
           // Use offsetWidth/offsetHeight to get actual layout size without CSS transforms
@@ -985,6 +1026,14 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
         transforms.set(id, { x: 0, y: 0 });
       }
     });
+
+    // If dragging an external item, it needs the same transform as its placeholder
+    if (draggedId.startsWith('__external__')) {
+      const placeholderTransform = transforms.get('__placeholder__');
+      if (placeholderTransform) {
+        transforms.set(draggedId, placeholderTransform);
+      }
+    }
 
     return transforms;
   };
@@ -1168,6 +1217,65 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
   }
 
   /**
+   * Render placeholder for external item
+   * Positioned absolutely relative to flex container, overlaying the invisible external item
+   */
+  renderExternalPlaceholder(): ?ReactElement<any> {
+    if (!this.flexRef.current) return null;
+
+    const externalItem = this.state.layout.find(item => item.i.startsWith("__external__"));
+    if (!externalItem) return null;
+
+    // Only render placeholder if we have bounds collected
+    const bounds = this.itemBounds.get(externalItem.i);
+    if (!bounds) return null;
+
+    // Query the external item's actual position in DOM
+    const externalEl = this.flexRef.current.querySelector(`[data-rgl-item-id="${externalItem.i}"]`);
+    if (!externalEl) return null;
+
+    const externalBounds = externalEl.getBoundingClientRect();
+    const containerBounds = this.flexRef.current.getBoundingClientRect();
+
+    // Calculate base position relative to container
+    let left = externalBounds.left - containerBounds.left;
+    let top = externalBounds.top - containerBounds.top;
+    const width = externalBounds.width;
+    const height = externalBounds.height;
+
+    // Apply transform offset from state if it exists
+    // This is crucial because getBoundingClientRect() is called during render,
+    // before the browser has painted the new transform
+    const transform = this.state.transforms?.get(externalItem.i);
+    if (transform) {
+      left += transform.x;
+      top += transform.y;
+    }
+
+    // Apply transition for smooth movement, unless transitions are disabled
+    const transition = this.state.disableTransitions
+      ? 'none'
+      : 'left 200ms ease, top 200ms ease, width 100ms ease, height 100ms ease';
+
+    return (
+      <div
+        key="external-placeholder"
+        className="react-flex-item react-flex-placeholder placeholder-dragging"
+        style={{
+          position: 'absolute',
+          left: `${left}px`,
+          top: `${top}px`,
+          width: `${width}px`,
+          height: `${height}px`,
+          pointerEvents: 'none',
+          boxSizing: 'border-box',
+          transition
+        }}
+      />
+    );
+  }
+
+  /**
    * Given a FlexLayoutItem, generate the child element.
    */
   processFlexItem(
@@ -1211,15 +1319,6 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
     // Check if this item's placeholder should be hidden (when dragging over external target)
     const hidePlaceholder = this.state.activeDrag?.hidden && l.i === this.state.activeDrag.i;
 
-    // Get external size from bounds (for sizing placeholder like internal drag)
-    let externalSize;
-    if (isExternalPlaceholder) {
-      const bounds = this.itemBounds.get(l.i);
-      if (bounds) {
-        externalSize = { width: bounds.width, height: bounds.height };
-      }
-    }
-
     return (
       <FlexItem
         key={child.key}
@@ -1250,7 +1349,7 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
         placeholderTransform={placeholderTransform}
         hidePlaceholder={hidePlaceholder}
         isExternalPlaceholder={isExternalPlaceholder}
-        externalSize={externalSize}
+        disableTransitions={isExternalPlaceholder}  // External items pop into place without transition
         flexId={this.props.id}
         enableCrossGridDrag={this.props.enableCrossGridDrag}
         dragDropContext={this.context}
@@ -1280,6 +1379,7 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
       justifyContent,
       alignItems,
       gap: `${gap}px`,
+      position: 'relative',  // For absolute positioning of external placeholder
       ...style
     };
 
@@ -1295,6 +1395,7 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
             this.processFlexItem(child, this.props.isDraggable)
         )}
         {this.renderExternalItem()}
+        {this.renderExternalPlaceholder()}
       </div>
     );
   }

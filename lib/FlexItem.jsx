@@ -80,6 +80,9 @@ type Props = {
   // External placeholder size (for sizing placeholder like internal drag)
   externalSize?: {width: number, height: number},
 
+  // Disable transitions (for external items to pop into place)
+  disableTransitions?: boolean,
+
   // Cross-container drag
   flexId?: ?string,
   enableCrossGridDrag?: boolean,
@@ -179,6 +182,8 @@ export default class FlexItem extends React.Component<Props, State> {
   };
 
   animationTimeout: ?TimeoutID = null;
+  transitionTimeout: ?TimeoutID = null;
+  mounted: boolean = false;
 
   elementRef: { current: null | HTMLElement } = React.createRef();
 
@@ -418,6 +423,7 @@ export default class FlexItem extends React.Component<Props, State> {
 
     // Notify drag-drop context about drag end
     // The context will determine if this was dropped on a target (grid, flex, or external)
+    let isMovingToAnotherTarget = false;
     if (this.props.enableCrossGridDrag && this.props.dragDropContext && this.props.flexId) {
       // Determine which drop target we're over based on mouse position
       let targetId = null;
@@ -429,12 +435,18 @@ export default class FlexItem extends React.Component<Props, State> {
             if (e.clientX >= rect.left && e.clientX <= rect.right &&
                 e.clientY >= rect.top && e.clientY <= rect.bottom) {
               targetId = id;
+              isMovingToAnotherTarget = true;
               break;
             }
           }
         }
       }
       this.props.dragDropContext.endDrag(targetId);
+
+      // If moving to another target, the component will unmount, so skip setState
+      if (isMovingToAnotherTarget) {
+        return;
+      }
     }
 
     if (!originalFlexPosition) {
@@ -463,14 +475,19 @@ export default class FlexItem extends React.Component<Props, State> {
     if (this.animationTimeout) {
       clearTimeout(this.animationTimeout);
     }
+    if (this.transitionTimeout) {
+      clearTimeout(this.transitionTimeout);
+    }
     this.animationTimeout = setTimeout(() => {
+      if (!this.mounted) return;
       this.setState({
         animating: null,
         originalFlexPosition: null,
         disableTransitions: true
       });
 
-      setTimeout(() => {
+      this.transitionTimeout = setTimeout(() => {
+        if (!this.mounted) return;
         this.setState({ disableTransitions: false });
       }, 50);
     }, 200);
@@ -482,9 +499,17 @@ export default class FlexItem extends React.Component<Props, State> {
     });
   };
 
+  componentDidMount() {
+    this.mounted = true;
+  }
+
   componentWillUnmount() {
+    this.mounted = false;
     if (this.animationTimeout) {
       clearTimeout(this.animationTimeout);
+    }
+    if (this.transitionTimeout) {
+      clearTimeout(this.transitionTimeout);
     }
   }
 
@@ -528,7 +553,10 @@ export default class FlexItem extends React.Component<Props, State> {
       maxHeight
     } = this.props;
 
-    const { dragging, animating, disableTransitions } = this.state;
+    const { dragging, animating } = this.state;
+
+    // Disable transitions if prop is set OR if state disables them
+    const shouldDisableTransitions = this.props.disableTransitions || this.state.disableTransitions;
 
     // Create class names following the same pattern as GridItem
     const classes = clsx(
@@ -539,7 +567,7 @@ export default class FlexItem extends React.Component<Props, State> {
         "react-draggable": isDraggable,
         "react-draggable-dragging": Boolean(dragging),
         "react-flex-animating": Boolean(animating),
-        "react-flex-no-transition": disableTransitions,
+        "react-flex-no-transition": shouldDisableTransitions,
         cssTransforms: useCSSTransforms
       }
     );
@@ -550,18 +578,12 @@ export default class FlexItem extends React.Component<Props, State> {
       ...this.createStyle()
     };
 
-    // For external placeholders, hide the content
+    // For external placeholders, hide the content but keep in flex flow
+    // This allows the item to participate in flex-grow/shrink calculations
     if (this.props.isExternalPlaceholder) {
-      // Always hide the content (even on first render before we have bounds)
       childStyle.opacity = 0;
       childStyle.pointerEvents = 'none';
-
-      // If we have bounds, position absolutely off-screen to prevent layout shift
-      if (this.props.externalSize) {
-        childStyle.position = 'absolute';
-        childStyle.top = '-9999px';
-        childStyle.left = '-9999px';
-      }
+      // DON'T position absolute - stay in flex flow!
     }
 
     let newChild = React.cloneElement(children, {
@@ -575,22 +597,22 @@ export default class FlexItem extends React.Component<Props, State> {
     newChild = this.mixinDraggable(newChild, isDraggable);
 
     // If dragging or animating, render a placeholder to hold the space in flex layout
-    // For external items, always show placeholder (they're not draggable but need placeholder)
+    // External items DON'T get placeholder here - they're rendered separately in ReactFlexLayout
     // Don't show placeholder if hidePlaceholder prop is true (dragging over external target)
-    const showPlaceholder = ((dragging || animating) || this.props.isExternalPlaceholder) && !this.props.hidePlaceholder;
+    const showPlaceholder = ((dragging || animating) && !this.props.isExternalPlaceholder) && !this.props.hidePlaceholder;
     if (showPlaceholder) {
-      // Use same sizing logic for both internal and external drags
-      const sizeSource = dragging || animating || this.props.externalSize;
+      // Use same sizing logic for internal drags
+      const sizeSource = dragging || animating;
 
       const placeholderStyle = {
         order,
-        flexGrow: 0,      // Fixed size - don't grow
+        flexGrow: 0,      // Fixed size - don't grow (placeholder is empty, can't flex like real content)
         flexShrink: 0,    // Fixed size - don't shrink
         flexBasis: 'auto',
         boxSizing: 'border-box'
       };
 
-      // Use sizeSource dimensions (works for both internal drag and external placeholder)
+      // Use sizeSource dimensions
       // Only set size in main axis - let flexbox stretch in cross axis
       if (sizeSource) {
         const { direction } = this.props;

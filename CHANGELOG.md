@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.6.2 (Oct 20, 2025)
+
+### Bug Fixes
+
+- **Fixed External Drag into Flex Layouts**: Resolved multiple issues when dragging items from grids or external sources into flex layouts
+  - Fixed jump/re-order issue on initial external item insertion by using consistent zone collision detection throughout
+  - Fixed flex-grow/shrink items not maintaining correct size during external drag by keeping external items in flex flow instead of absolute positioning
+  - External items now stay in flex flow with `opacity: 0` and a separate absolutely-positioned placeholder overlay is rendered for visual feedback
+  - External placeholder now moves smoothly during drag with proper CSS transitions
+  - Other items now smoothly transition to their new positions when external item is inserted, while the external item itself pops into place instantly
+  - Fixed memory leak warnings when dropping external items by detecting cross-container moves and skipping setState on unmounting components
+  - Fixed bounds corruption for external items during drag by skipping them in size update calculations
+  - External items now receive proper transform tracking so their placeholder follows reordering animations
+
 ## 1.6.1 (Oct 20, 2025)
 
 ### Documentation
