@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.6.1 (Oct 20, 2025)
+
+### Documentation
+
+- **Corrected Flex Item Documentation**: Removed incorrect `basis` prop references from documentation
+  - The `basis` prop was completely removed from the codebase in 1.6.0 but was incorrectly documented as optional
+  - Updated all examples to use size constraints (`minWidth`, `maxWidth`, `minHeight`, `maxHeight`) instead
+  - Clarified that flex item sizing is controlled by `grow` and `shrink` with optional size constraints
+  - No code changes - documentation-only release
+
 ## 1.6.0 (Oct 20, 2025)
 
 ### New Features
