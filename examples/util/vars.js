@@ -219,4 +219,25 @@ module.exports = [
       "Try dragging items - they smoothly return to their flex positions when dropped."
     ]
   },
+  {
+    title: "Grid ↔ Flex Drag and Drop",
+    source: "grid-flex-drag",
+    paragraphs: [
+      "This demonstrates drag and drop between grids and flex layouts. Items automatically transform between coordinate systems."
+    ]
+  },
+  {
+    title: "Flex ↔ Flex + Droppable",
+    source: "flex-droppable",
+    paragraphs: [
+      "This demonstrates drag and drop between flex layouts and external droppable containers."
+    ]
+  },
+  {
+    title: "Comprehensive Drag & Drop",
+    source: "comprehensive-drag",
+    paragraphs: [
+      "This demonstrates all drag and drop combinations: Grid ↔ Grid, Grid ↔ Flex, Flex ↔ Flex, and dragging to external drop zones."
+    ]
+  },
 ];

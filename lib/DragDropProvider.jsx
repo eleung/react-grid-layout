@@ -179,7 +179,7 @@ export default class DragDropProvider extends React.Component<Props, State> {
     const { dragState } = this.state;
     if (!dragState) return;
 
-    // Handle drop on a target (grid or external)
+    // Handle drop on a target (grid, flex, or external)
     if (droppedOnTargetId && droppedOnTargetId !== dragState.sourceId) {
       const targetConfig = this.dropTargets.get(droppedOnTargetId);
 
@@ -197,6 +197,14 @@ export default class DragDropProvider extends React.Component<Props, State> {
             }
           }
 
+          // Handle flex target - item removal is handled by ReactFlexLayout
+          if (targetConfig.type === 'flex') {
+            const sourceConfig = this.dropTargets.get(dragState.sourceId);
+            if (sourceConfig && sourceConfig.onItemRemoved) {
+              sourceConfig.onItemRemoved(dragState.item.i);
+            }
+          }
+
           // Handle external container target
           if (targetConfig.type === 'external') {
             // Call external container's onDrop callback
@@ -204,7 +212,7 @@ export default class DragDropProvider extends React.Component<Props, State> {
               targetConfig.onDrop(dragState.item, dragState.mouseX, dragState.mouseY);
             }
 
-            // Notify source grid to remove item
+            // Notify source (grid or flex) to remove item
             const sourceConfig = this.dropTargets.get(dragState.sourceId);
             if (sourceConfig && sourceConfig.onItemRemoved) {
               sourceConfig.onItemRemoved(dragState.item.i);
@@ -230,18 +238,45 @@ export default class DragDropProvider extends React.Component<Props, State> {
   };
 
   /**
-   * Default transform: preserves physical size when moving items between grids
+   * Default transform: preserves physical size when moving items between different layouts
    */
   defaultTransformItem = (
     item: LayoutItem,
     sourceConfig: DropTargetConfig,
     targetConfig: DropTargetConfig
   ): LayoutItem => {
-    // Only transform between grids
-    if (sourceConfig.type !== 'grid' || targetConfig.type !== 'grid') {
-      return item;
+    const sourceType = sourceConfig.type;
+    const targetType = targetConfig.type;
+
+    // Grid -> Grid transformation
+    if (sourceType === 'grid' && targetType === 'grid') {
+      return this.transformGridToGrid(item, sourceConfig, targetConfig);
     }
 
+    // Grid -> Flex transformation
+    if (sourceType === 'grid' && targetType === 'flex') {
+      return this.transformGridToFlex(item, sourceConfig, targetConfig);
+    }
+
+    // Flex -> Grid transformation
+    if (sourceType === 'flex' && targetType === 'grid') {
+      return this.transformFlexToGrid(item, sourceConfig, targetConfig);
+    }
+
+    // Flex -> Flex transformation
+    if (sourceType === 'flex' && targetType === 'flex') {
+      return this.transformFlexToFlex(item, sourceConfig, targetConfig);
+    }
+
+    // No transformation for other combinations (e.g., to external containers)
+    return item;
+  };
+
+  transformGridToGrid = (
+    item: LayoutItem,
+    sourceConfig: DropTargetConfig,
+    targetConfig: DropTargetConfig
+  ): LayoutItem => {
     if (
       sourceConfig.cols === targetConfig.cols &&
       sourceConfig.rowHeight === targetConfig.rowHeight &&
@@ -267,6 +302,137 @@ export default class DragDropProvider extends React.Component<Props, State> {
     w = Math.min(w, targetConfig.cols);
 
     return { ...item, w, h };
+  };
+
+  /**
+   * Helper: Convert grid constraints (minW, maxW, minH, maxH) to flex constraints (minWidth, maxWidth, etc)
+   */
+  convertGridConstraintsToFlex = (
+    item: LayoutItem,
+    cols: number,
+    containerWidth: number,
+    rowHeight: number
+  ): $Shape<LayoutItem> => {
+    return {
+      minWidth: item.minW !== undefined ? (item.minW / cols) * containerWidth : undefined,
+      maxWidth: item.maxW !== undefined ? (item.maxW / cols) * containerWidth : undefined,
+      minHeight: item.minH !== undefined ? item.minH * rowHeight : undefined,
+      maxHeight: item.maxH !== undefined ? item.maxH * rowHeight : undefined
+    };
+  };
+
+  /**
+   * Helper: Convert flex constraints (minWidth, maxWidth, etc) to grid constraints (minW, maxW, etc)
+   */
+  convertFlexConstraintsToGrid = (
+    item: LayoutItem,
+    cols: number,
+    containerWidth: number,
+    rowHeight: number
+  ): $Shape<LayoutItem> => {
+    return {
+      minW: item.minWidth !== undefined ?
+        Math.max(1, Math.round((item.minWidth / containerWidth) * cols)) : undefined,
+      maxW: item.maxWidth !== undefined ?
+        Math.round((item.maxWidth / containerWidth) * cols) : undefined,
+      minH: item.minHeight !== undefined ?
+        Math.max(1, Math.round(item.minHeight / rowHeight)) : undefined,
+      maxH: item.maxHeight !== undefined ?
+        Math.round(item.maxHeight / rowHeight) : undefined
+    };
+  };
+
+  transformGridToFlex = (
+    item: LayoutItem,
+    sourceConfig: DropTargetConfig,
+    targetConfig: DropTargetConfig
+  ): LayoutItem => {
+    // Validate and get config with defaults
+    if (!sourceConfig.containerWidth || !sourceConfig.cols || !sourceConfig.rowHeight) {
+      console.warn('DragDropProvider: Missing source grid config for grid-to-flex transformation. Using defaults.');
+    }
+
+    const containerWidth = sourceConfig.containerWidth || 1200;
+    const cols = sourceConfig.cols || 12;
+    const rowHeight = sourceConfig.rowHeight || 30;
+
+    // Convert grid dimensions to physical pixels
+    const physicalWidth = (item.w / cols) * containerWidth;
+    const physicalHeight = item.h * rowHeight;
+
+    return {
+      i: item.i,
+      order: 0,
+      grow: 0,
+      shrink: 1,
+      width: physicalWidth,
+      height: physicalHeight,
+      ...this.convertGridConstraintsToFlex(item, cols, containerWidth, rowHeight)
+    };
+  };
+
+  transformFlexToGrid = (
+    item: LayoutItem,
+    sourceConfig: DropTargetConfig,
+    targetConfig: DropTargetConfig
+  ): LayoutItem => {
+    // Validate and get config with defaults
+    if (!targetConfig.containerWidth || !targetConfig.cols || !targetConfig.rowHeight) {
+      console.warn('DragDropProvider: Missing target grid config for flex-to-grid transformation. Using defaults.');
+    }
+
+    const containerWidth = targetConfig.containerWidth || 1200;
+    const cols = targetConfig.cols || 12;
+    const rowHeight = targetConfig.rowHeight || 30;
+
+    // Use actual measured dimensions with sensible defaults
+    const defaultWidth = (2 / cols) * containerWidth;
+    const defaultHeight = 2 * rowHeight;
+
+    const physicalW = item.width || defaultWidth;
+    const physicalH = item.height || defaultHeight;
+
+    // Convert to grid units
+    let w = Math.max(1, Math.round((physicalW / containerWidth) * cols));
+    let h = Math.max(1, Math.round(physicalH / rowHeight));
+
+    // Get converted constraints
+    const constraints = this.convertFlexConstraintsToGrid(item, cols, containerWidth, rowHeight);
+
+    // Apply constraints to w and h
+    if (constraints.minW !== undefined) w = Math.max(w, constraints.minW);
+    if (constraints.maxW !== undefined) w = Math.min(w, constraints.maxW);
+    if (constraints.minH !== undefined) h = Math.max(h, constraints.minH);
+    if (constraints.maxH !== undefined) h = Math.min(h, constraints.maxH);
+
+    w = Math.min(w, cols);
+
+    return {
+      i: item.i,
+      w,
+      h,
+      x: 0,
+      y: 0,
+      ...constraints
+    };
+  };
+
+  transformFlexToFlex = (
+    item: LayoutItem,
+    sourceConfig: DropTargetConfig,
+    targetConfig: DropTargetConfig
+  ): LayoutItem => {
+    return {
+      i: item.i,
+      grow: item.grow || 0,
+      shrink: item.shrink !== undefined ? item.shrink : 1,
+      order: 0,
+      alignSelf: item.alignSelf,
+      minWidth: item.minWidth,
+      maxWidth: item.maxWidth,
+      minHeight: item.minHeight,
+      maxHeight: item.maxHeight
+    };
   };
 
   /**

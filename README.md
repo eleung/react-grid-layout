@@ -28,6 +28,7 @@ RGL is React-only and does not require jQuery.
 - [Drag and Drop Usage](#drag-and-drop-usage)
   - [Cross-Grid Drag and Drop](#cross-grid-drag-and-drop)
   - [External Droppable Containers](#external-droppable-containers)
+  - [Cross-Layout Drag and Drop (Grid ↔ Flex)](#cross-layout-drag-and-drop-grid--flex)
 - [Responsive Usage](#responsive-usage)
 - [Flex Layout Usage](#flex-layout-usage)
 - [Providing Grid Width](#providing-grid-width)
@@ -70,6 +71,9 @@ RGL is React-only and does not require jQuery.
 1. [External Droppable Containers](https://react-grid-layout.github.io/react-grid-layout/examples/23-external-droppable.html)
 1. [Basic Flex Layout](https://react-grid-layout.github.io/react-grid-layout/examples/24-basic-flex.html)
 1. [Flex Layout Directions](https://react-grid-layout.github.io/react-grid-layout/examples/25-flex-directions.html)
+1. [Grid ↔ Flex Drag and Drop](https://react-grid-layout.github.io/react-grid-layout/examples/26-grid-flex-drag.html)
+1. [Flex ↔ Flex + Droppable](https://react-grid-layout.github.io/react-grid-layout/examples/27-flex-droppable.html)
+1. [Comprehensive Drag & Drop](https://react-grid-layout.github.io/react-grid-layout/examples/28-comprehensive-drag.html)
 
 #### Projects Using React-Grid-Layout
 
@@ -112,8 +116,12 @@ _Know of others? Create a PR to let me know!_
 - **Flex layout support** - Alternative layout system using CSS Flexbox
   - Draggable flex items with smooth reordering
   - Full flexbox property support (direction, justifyContent, alignItems, gap)
-  - Individual flex item properties (order, grow, shrink, basis, alignSelf)
+  - Individual flex item properties (order, grow, shrink, alignSelf)
   - Visual feedback and animations during drag
+- **Cross-layout drag and drop** - Drag items between grids and flex layouts seamlessly
+  - Automatic item transformation between coordinate systems
+  - Grid ↔ Grid, Flex ↔ Flex, Grid ↔ Flex all supported
+  - Smart constraint conversion (minW/maxW ↔ minWidth/maxWidth)
 - Grid Items placed using CSS Transforms
   - Performance with CSS Transforms: [on](http://i.imgur.com/FTogpLp.jpg) / [off](http://i.imgur.com/gOveMm8.jpg), note paint (green) as % of time
 - Compatibility with `<React.StrictMode>`
@@ -378,7 +386,117 @@ class ExternalDropExample extends React.Component {
 </Droppable>
 ```
 
-### Responsive Usage
+### Cross-Layout Drag and Drop (Grid ↔ Flex)
+
+Items can be dragged between grid layouts and flex layouts seamlessly. The library automatically transforms items between coordinate systems:
+
+```js
+import GridLayout, { DragDropProvider, ReactFlexLayout } from "react-grid-layout";
+
+class CrossLayoutExample extends React.Component {
+  state = {
+    gridLayout: [
+      { i: "a", x: 0, y: 0, w: 2, h: 2 },
+      { i: "b", x: 2, y: 0, w: 2, h: 4 }
+    ],
+    flexLayout: [
+      { i: "c", order: 0, grow: 0, shrink: 1 },
+      { i: "d", order: 1, grow: 1, shrink: 1 }
+    ]
+  };
+
+  onGridChange = (layout) => this.setState({ gridLayout: layout });
+  onFlexChange = (layout) => this.setState({ flexLayout: layout });
+
+  render() {
+    return (
+      <DragDropProvider>
+        {/* Grid Layout */}
+        <GridLayout
+          id="grid-1"
+          enableCrossGridDrag={true}
+          layout={this.state.gridLayout}
+          onLayoutChange={this.onGridChange}
+          cols={12}
+          rowHeight={30}
+          width={600}
+        >
+          {this.state.gridLayout.map(item => (
+            <div key={item.i}>{item.i}</div>
+          ))}
+        </GridLayout>
+
+        {/* Flex Layout */}
+        <ReactFlexLayout
+          id="flex-1"
+          enableCrossGridDrag={true}
+          isDraggable={true}
+          direction="row"
+          gap={10}
+          width={600}
+          layout={this.state.flexLayout}
+          onLayoutChange={this.onFlexChange}
+        >
+          {this.state.flexLayout.map(item => (
+            <div key={item.i}>{item.i}</div>
+          ))}
+        </ReactFlexLayout>
+      </DragDropProvider>
+    );
+  }
+}
+```
+
+**How Item Transformation Works:**
+
+When dragging items between grids and flex layouts, the library automatically converts properties:
+
+- **Grid → Flex**: `{x, y, w, h}` coordinates are converted to physical pixel dimensions (`width`, `height`)
+- **Flex → Grid**: Pixel dimensions are converted to grid units based on `cols` and `rowHeight`
+- **Constraints**: `minW/maxW/minH/maxH` ↔ `minWidth/maxWidth/minHeight/maxHeight` are automatically converted
+
+**Conditional Drop Acceptance:**
+
+Both grids and flex layouts support conditional drop acceptance:
+
+```js
+// Only accept items from specific sources
+<ReactFlexLayout
+  id="flex-1"
+  enableCrossGridDrag={true}
+  crossGridAcceptsDrop={(item, sourceId) => sourceId === "grid-1"}
+  // ... other props
+/>
+
+// Only accept specific item types
+<GridLayout
+  id="grid-2"
+  enableCrossGridDrag={true}
+  crossGridAcceptsDrop={(item, sourceId) => item.type === "widget"}
+  // ... other props
+/>
+```
+
+**Rendering Custom Dropping Items:**
+
+For flex layouts, you can customize how items from other containers appear while being dragged:
+
+```js
+<ReactFlexLayout
+  id="flex-1"
+  enableCrossGridDrag={true}
+  renderDroppingItem={(item) => (
+    <div style={{ background: "#e0e0e0", padding: "20px" }}>
+      Dropping: {item.i}
+    </div>
+  )}
+  // ... other props
+>
+  {/* children */}
+</ReactFlexLayout>
+```
+
+## Responsive Usage
 
 To make RGL responsive, use the `<ResponsiveReactGridLayout>` element:
 
@@ -429,9 +547,9 @@ class MyFlexLayout extends React.Component {
   render() {
     // layout is an array of objects with flex properties
     const layout = [
-      { i: "a", order: 0, grow: 0, shrink: 1, basis: "150px" },
-      { i: "b", order: 1, grow: 1, shrink: 1, basis: "auto" },
-      { i: "c", order: 2, grow: 0, shrink: 1, basis: "150px" }
+      { i: "a", order: 0, grow: 0, shrink: 1 },
+      { i: "b", order: 1, grow: 1, shrink: 1 },
+      { i: "c", order: 2, grow: 0, shrink: 1 }
     ];
 
     return (
@@ -443,9 +561,9 @@ class MyFlexLayout extends React.Component {
         gap={10}
         width={1200}
       >
-        <div key="a">Fixed width item</div>
-        <div key="b">Flexible item</div>
-        <div key="c">Fixed width item</div>
+        <div key="a">Item A</div>
+        <div key="b">Item B (grows)</div>
+        <div key="c">Item C</div>
       </ReactFlexLayout>
     );
   }
@@ -464,9 +582,9 @@ const FlexLayout = WidthProvider(ReactFlexLayout);
 class MyResponsiveFlexLayout extends React.Component {
   render() {
     const layout = [
-      { i: "a", order: 0, grow: 0, shrink: 1, basis: "200px" },
-      { i: "b", order: 1, grow: 1, shrink: 1, basis: "auto" },
-      { i: "c", order: 2, grow: 0, shrink: 1, basis: "200px" }
+      { i: "a", order: 0, grow: 0, shrink: 1 },
+      { i: "b", order: 1, grow: 1, shrink: 1 },
+      { i: "c", order: 2, grow: 0, shrink: 1 }
     ];
 
     return (
@@ -496,13 +614,13 @@ You can also define flex properties directly on children:
   gap={10}
   width={1200}
 >
-  <div key="a" data-flex={{ order: 0, grow: 0, shrink: 1, basis: "150px" }}>
+  <div key="a" data-flex={{ order: 0, grow: 0, shrink: 1 }}>
     a
   </div>
-  <div key="b" data-flex={{ order: 1, grow: 1, shrink: 1, basis: "auto" }}>
+  <div key="b" data-flex={{ order: 1, grow: 1, shrink: 1 }}>
     b
   </div>
-  <div key="c" data-flex={{ order: 2, grow: 0, shrink: 1, basis: "150px" }}>
+  <div key="c" data-flex={{ order: 2, grow: 0, shrink: 1 }}>
     c
   </div>
 </ReactFlexLayout>
@@ -985,8 +1103,9 @@ draggableCancel: ?string = "",
 draggableHandle: ?string = "",
 
 // Layout is an array of objects with the format:
-// {i: string, order: number, grow: number, shrink: number, basis: string|number}
+// {i: string, order: number, grow: number, shrink: number, basis?: string|number}
 // The i property must match the key used on each item component.
+// Note: basis is optional; if not specified, defaults to 'auto'
 layout: ?FlexLayout = [],
 
 //
@@ -1012,16 +1131,26 @@ transformScale: ?number = 1,
 // Cross-Grid Drag and Drop (same as GridLayout)
 //
 
-// Unique identifier for this flex layout instance
+// Unique identifier for this flex layout instance. Required when using cross-grid drag.
 id: ?string,
 
-// If true, enables cross-grid drag and drop functionality
+// If true, enables cross-grid drag and drop functionality.
+// Items can be dragged between grids, flex layouts, and external droppable containers.
 enableCrossGridDrag: ?boolean = false,
 
 // Controls whether this flex layout accepts items dropped from other layouts
 // Can be a boolean or a predicate function:
-//   (item: FlexLayoutItem, sourceId: string) => boolean
-crossGridAcceptsDrop: ?(boolean | (item: FlexLayoutItem, sourceId: string) => boolean) = true,
+//   (item: LayoutItem, sourceId: string) => boolean
+// Examples:
+//   - true/false: Accept/reject all drops
+//   - (item, sourceId) => sourceId === "grid-1": Only accept from specific container
+//   - (item, sourceId) => item.type === "widget": Only accept specific item types
+crossGridAcceptsDrop: ?(boolean | (item: LayoutItem, sourceId: string) => boolean) = true,
+
+// Custom render function for items being dragged from other containers
+// Allows you to customize the appearance of external items during drag
+// The function receives the item being dragged and should return a React element
+renderDroppingItem: ?(item: LayoutItem) => ReactElement,
 
 //
 // Callbacks
@@ -1075,15 +1204,17 @@ build a layout array, or attach this object as the `data-flex` property to each 
   // Flex-shrink (how much the item should shrink relative to others)
   shrink: number,
 
-  // Flex-basis (initial size before growing/shrinking)
+  // Flex-basis (initial size before growing/shrinking) - OPTIONAL
   // Can be a string ("auto", "200px", "50%") or number (pixels)
-  basis: string | number,
+  // If not specified, defaults to 'auto'
+  basis: ?(string | number),
 
   // Override container's alignItems for this specific item
   // "auto", "flex-start", "flex-end", "center", "stretch", "baseline"
   alignSelf: ?FlexAlignSelf,
 
   // Size constraints (in pixels)
+  // These are automatically converted when dragging between grids and flex layouts
   minWidth: ?number,
   maxWidth: ?number,
   minHeight: ?number,
@@ -1101,13 +1232,13 @@ build a layout array, or attach this object as the `data-flex` property to each 
 
 ```js
 const layout = [
-  // Fixed width item
+  // Fixed width item (with explicit basis)
   { i: "sidebar", order: 0, grow: 0, shrink: 0, basis: "250px" },
 
-  // Flexible content area
-  { i: "content", order: 1, grow: 1, shrink: 1, basis: "auto" },
+  // Flexible content area (basis optional, defaults to 'auto')
+  { i: "content", order: 1, grow: 1, shrink: 1 },
 
-  // Fixed width item with min/max constraints
+  // Item with min/max constraints (automatically applied during cross-layout drag)
   {
     i: "panel",
     order: 2,

@@ -1,7 +1,7 @@
 {
-  "name": "react-grid-layout",
-  "version": "1.5.2",
-  "description": "A draggable and resizable grid layout with responsive breakpoints, for React.",
+  "name": "@eleung/react-grid-layout",
+  "version": "1.6.0",
+  "description": "A draggable and resizable grid layout with responsive breakpoints, for React. Includes Flexbox layout support and cross-layout drag and drop.",
   "main": "index.js",
   "scripts": {
     "lint": "make lint",
@@ -18,7 +18,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:STRML/react-grid-layout.git"
+    "url": "git@github.com:eleung/react-grid-layout.git"
   },
   "keywords": [
     "react",
@@ -28,14 +28,21 @@
     "resize",
     "resizable",
     "fluid",
-    "responsive"
+    "responsive",
+    "flexbox",
+    "flex-layout",
+    "cross-grid-drag",
+    "cross-layout-drag"
   ],
   "author": "Samuel Reed <samuel.trace.reed@gmail.com> (http://strml.net/)",
+  "contributors": [
+    "Edmond Leung <eleung>"
+  ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/STRML/react-grid-layout/issues"
+    "url": "https://github.com/eleung/react-grid-layout/issues"
   },
-  "homepage": "https://github.com/STRML/react-grid-layout",
+  "homepage": "https://github.com/eleung/react-grid-layout",
   "dependencies": {
     "clsx": "^2.1.1",
     "fast-equals": "^4.0.3",
@@ -102,6 +109,7 @@
     "react-dom": ">= 16.3.0"
   },
   "publishConfig": {
+    "access": "public",
     "registry": "https://registry.npmjs.org"
   },
   "jest": {

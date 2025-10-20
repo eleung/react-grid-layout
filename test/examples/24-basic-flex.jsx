@@ -43,8 +43,7 @@ export default class BasicFlexLayout extends React.PureComponent {
         i: i.toString(),
         order: i,
         grow: i % 3 === 0 ? 1 : 0,  // Every 3rd item grows
-        shrink: 1,
-        basis: i % 3 === 0 ? "auto" : "150px"  // Growing items use auto, others fixed
+        shrink: 1
       };
     });
   }

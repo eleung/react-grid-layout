@@ -26,29 +26,23 @@ export default class FlexDirectionsLayout extends React.PureComponent {
         i: i.toString(),
         order: i,
         grow: 0,
-        shrink: 1,
-        basis: "120px"
+        shrink: 1
       };
     });
   }
 
   generateDOM() {
     return _.map(_.range(6), function(i) {
-      const colors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8", "#F7DC6F"];
       return (
         <div key={i} style={{
-          border: "2px solid #333",
-          padding: "30px",
-          background: colors[i],
+          border: "1px solid #ddd",
+          padding: "20px",
+          background: "#f0f0f0",
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
-          borderRadius: "8px",
-          color: "#fff",
-          fontWeight: "bold",
-          fontSize: "20px"
+          justifyContent: "center"
         }}>
-          {i}
+          <span className="text" style={{ fontSize: "24px", fontWeight: "bold" }}>{i}</span>
         </div>
       );
     });
@@ -64,15 +58,12 @@ export default class FlexDirectionsLayout extends React.PureComponent {
 
     return (
       <div>
-        <div style={{ marginBottom: "20px", padding: "20px", background: "#f5f5f5", borderRadius: "8px" }}>
-          <h3 style={{ marginTop: 0 }}>Flex Controls</h3>
-
-          <div style={{ marginBottom: "15px" }}>
-            <label style={{ display: "inline-block", width: "150px", fontWeight: "bold" }}>Direction:</label>
+        <div style={{ marginBottom: "20px" }}>
+          <div style={{ marginBottom: "10px" }}>
+            <label style={{ display: "inline-block", width: "120px" }}>Direction:</label>
             <select
               value={direction}
               onChange={(e) => this.setState({ direction: e.target.value })}
-              style={{ padding: "5px", fontSize: "14px" }}
             >
               <option value="row">row</option>
               <option value="row-reverse">row-reverse</option>
@@ -81,12 +72,11 @@ export default class FlexDirectionsLayout extends React.PureComponent {
             </select>
           </div>
 
-          <div style={{ marginBottom: "15px" }}>
-            <label style={{ display: "inline-block", width: "150px", fontWeight: "bold" }}>Justify Content:</label>
+          <div style={{ marginBottom: "10px" }}>
+            <label style={{ display: "inline-block", width: "120px" }}>Justify Content:</label>
             <select
               value={justifyContent}
               onChange={(e) => this.setState({ justifyContent: e.target.value })}
-              style={{ padding: "5px", fontSize: "14px" }}
             >
               <option value="flex-start">flex-start</option>
               <option value="flex-end">flex-end</option>
@@ -97,12 +87,11 @@ export default class FlexDirectionsLayout extends React.PureComponent {
             </select>
           </div>
 
-          <div style={{ marginBottom: "15px" }}>
-            <label style={{ display: "inline-block", width: "150px", fontWeight: "bold" }}>Align Items:</label>
+          <div style={{ marginBottom: "10px" }}>
+            <label style={{ display: "inline-block", width: "120px" }}>Align Items:</label>
             <select
               value={alignItems}
               onChange={(e) => this.setState({ alignItems: e.target.value })}
-              style={{ padding: "5px", fontSize: "14px" }}
             >
               <option value="flex-start">flex-start</option>
               <option value="flex-end">flex-end</option>
@@ -113,20 +102,19 @@ export default class FlexDirectionsLayout extends React.PureComponent {
           </div>
         </div>
 
-        <div style={{ border: "2px dashed #999", padding: "10px", minHeight: "300px" }}>
-          <FlexLayout
-            layout={layout}
-            onLayoutChange={this.onLayoutChange.bind(this)}
-            direction={direction}
-            justifyContent={justifyContent}
-            alignItems={alignItems}
-            gap={15}
-            isDraggable={true}
-            {...this.props}
-          >
-            {this.generateDOM()}
-          </FlexLayout>
-        </div>
+        <FlexLayout
+          layout={layout}
+          onLayoutChange={this.onLayoutChange.bind(this)}
+          direction={direction}
+          justifyContent={justifyContent}
+          alignItems={alignItems}
+          gap={10}
+          isDraggable={true}
+          style={{ background: "#f9f9f9", minHeight: "300px", padding: "10px" }}
+          {...this.props}
+        >
+          {this.generateDOM()}
+        </FlexLayout>
       </div>
     );
   }

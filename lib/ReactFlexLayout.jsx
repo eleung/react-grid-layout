@@ -13,6 +13,8 @@ import {
 
 import FlexItem from "./FlexItem";
 import ReactFlexLayoutPropTypes from "./ReactFlexLayoutPropTypes";
+import DragDropContext from "./DragDropContext";
+import type { DragDropContextValue } from "./DragDropContext";
 import type {
   ChildrenArray as ReactChildrenArray,
   Element as ReactElement
@@ -42,10 +44,16 @@ type State = {
   // Current order during drag (for persisting on drop)
   currentOrder: ?Array<string>,
   // Disable transitions during order persistence
-  disableTransitions: boolean
+  disableTransitions: boolean,
+  // Cross-container drag state
+  isDropActive: boolean,
+  isDropSource: boolean
 };
 
 const layoutClassName = "react-flex-layout";
+
+// Constants
+const TRANSITION_RESET_DELAY_MS = 50;
 
 /**
  * A reactive, fluid flex layout with draggable components.
@@ -53,6 +61,10 @@ const layoutClassName = "react-flex-layout";
 export default class ReactFlexLayout extends React.Component<Props, State> {
   static displayName: ?string = "ReactFlexLayout";
   static propTypes = ReactFlexLayoutPropTypes;
+
+  // Context for drag and drop (flex layouts, grids, and external containers)
+  static contextType = DragDropContext;
+  context: ?DragDropContextValue;
 
   static defaultProps: DefaultProps = {
     autoSize: true,
@@ -92,7 +104,9 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
     children: [],
     transforms: new Map(),
     currentOrder: null,
-    disableTransitions: false
+    disableTransitions: false,
+    isDropActive: false,
+    isDropSource: false
   };
 
   flexRef: { current: ?HTMLElement } = React.createRef();
@@ -107,6 +121,23 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
   componentDidMount() {
     this.setState({ mounted: true });
     this.onLayoutMaybeChanged(this.state.layout, this.props.layout);
+
+    // Register with drag-drop context if enabled
+    if (this.props.enableCrossGridDrag && this.context && this.props.id && this.flexRef.current) {
+      this.context.registerDropTarget(
+        this.props.id,
+        this.flexRef.current,
+        'flex',
+        {
+          direction: this.props.direction,
+          gap: this.props.gap,
+          containerWidth: this.props.width,
+          containerHeight: this.getContainerHeight(),
+          acceptsDrop: this.getAcceptsDrop(),
+          onItemRemoved: this.onItemRemovedFromFlex
+        }
+      );
+    }
   }
 
   static getDerivedStateFromProps(
@@ -154,23 +185,126 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
       this.state.activeDrag !== nextState.activeDrag ||
       this.state.mounted !== nextState.mounted ||
       this.state.transforms !== nextState.transforms || // Check if transforms Map changed
-      this.state.disableTransitions !== nextState.disableTransitions
+      this.state.disableTransitions !== nextState.disableTransitions ||
+      this.state.isDropActive !== nextState.isDropActive ||
+      this.state.isDropSource !== nextState.isDropSource
     );
   }
 
   componentDidUpdate(prevProps: Props, prevState: State) {
+    this.updateDropTargetConfigIfNeeded(prevProps);
+
     if (!this.state.activeDrag) {
-      const newLayout = this.state.layout;
-      const oldLayout = prevState.layout;
-      this.onLayoutMaybeChanged(newLayout, oldLayout);
+      this.onLayoutMaybeChanged(this.state.layout, prevState.layout);
     }
+
+    this.handleExternalDragIfActive();
+    this.collectBoundsIfExternalItemAdded(prevState);
+    this.finalizeExternalDropIfDragEnded(prevState);
   }
 
   componentWillUnmount() {
     if (this.transitionTimeout) {
       clearTimeout(this.transitionTimeout);
     }
+
+    // Unregister from drag-drop context
+    if (this.props.enableCrossGridDrag && this.context && this.props.id) {
+      this.context.unregisterDropTarget(this.props.id);
+    }
   }
+
+  /**
+   * Helper: Schedule re-enabling transitions after a brief delay
+   */
+  scheduleReEnableTransitions = (): void => {
+    if (this.transitionTimeout) {
+      clearTimeout(this.transitionTimeout);
+    }
+    this.transitionTimeout = setTimeout(() => {
+      this.setState({ disableTransitions: false });
+    }, TRANSITION_RESET_DELAY_MS);
+  };
+
+  /**
+   * Helper: Schedule bounds collection after DOM paint (double RAF)
+   */
+  scheduleCollectBounds = (): void => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        this.collectItemBounds();
+        this.forceUpdate();
+      });
+    });
+  };
+
+  /**
+   * Helper: Update drop target config if relevant props changed
+   */
+  updateDropTargetConfigIfNeeded = (prevProps: Props): void => {
+    if (!this.props.enableCrossGridDrag || !this.context || !this.props.id) return;
+
+    if (
+      prevProps.width !== this.props.width ||
+      prevProps.direction !== this.props.direction ||
+      prevProps.gap !== this.props.gap ||
+      prevProps.crossGridAcceptsDrop !== this.props.crossGridAcceptsDrop
+    ) {
+      this.context.updateDropTargetConfig(this.props.id, {
+        containerWidth: this.props.width,
+        direction: this.props.direction,
+        gap: this.props.gap,
+        containerHeight: this.getContainerHeight(),
+        acceptsDrop: this.getAcceptsDrop()
+      });
+    }
+  };
+
+  /**
+   * Helper: Handle external drag from other containers
+   */
+  handleExternalDragIfActive = (): void => {
+    if (!this.props.enableCrossGridDrag || !this.context?.dragState) return;
+
+    const isSourceFlex = this.context.dragState.sourceId === this.props.id;
+    if (!isSourceFlex) {
+      this.handleExternalDrag();
+    }
+  };
+
+  /**
+   * Helper: Collect bounds if external item was just added to layout
+   */
+  collectBoundsIfExternalItemAdded = (prevState: State): void => {
+    if (!this.props.enableCrossGridDrag) return;
+
+    const currentExternalItem = this.state.layout.find(item => item.i.startsWith("__external__"));
+    const prevExternalItem = prevState.layout.find(item => item.i.startsWith("__external__"));
+
+    // External item was just added or changed - collect bounds after DOM is painted
+    if ((currentExternalItem && !prevExternalItem) ||
+        (currentExternalItem && prevExternalItem && currentExternalItem.i !== prevExternalItem.i)) {
+      this.scheduleCollectBounds();
+    }
+  };
+
+  /**
+   * Helper: Finalize external drop when drag ends
+   */
+  finalizeExternalDropIfDragEnded = (prevState: State): void => {
+    if (!this.props.enableCrossGridDrag || !this.context) return;
+
+    const hadActiveDrag = prevState.activeDrag;
+    const dragJustEnded = !this.context.dragState;
+
+    if (hadActiveDrag && dragJustEnded) {
+      const hadExternalPlaceholder = hadActiveDrag.i.startsWith("__external__");
+
+      if (hadExternalPlaceholder && this.state.activeDrag) {
+        this.handleExternalDrop();
+      }
+    }
+  };
 
   /**
    * Calculates a pixel value for the container.
@@ -180,6 +314,16 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
 
     // For flex, we let the browser handle height
     return "auto";
+  }
+
+  /**
+   * Get actual container height for drop target registration
+   */
+  getContainerHeight(): number {
+    if (this.flexRef.current) {
+      return this.flexRef.current.clientHeight;
+    }
+    return 0;
   }
 
   /**
@@ -195,6 +339,421 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
       this.props.onLayoutChange(newLayout);
     }
   }
+
+  /**
+   * Helper: Find the item ID at the given mouse position using gap-extended collision detection
+   * Returns the closest item if multiple zones overlap, or null if no collision
+   */
+  findItemAtPosition = (mouseX: number, mouseY: number): ?string => {
+    const { direction, gap } = this.props;
+    const isHorizontal = direction === 'row' || direction === 'row-reverse';
+    const halfGap = gap / 2;
+    let closestItemId = null;
+    let closestDistance = Infinity;
+
+    for (const [itemId, rect] of this.itemBounds.entries()) {
+      // Extend bounds by halfGap in main axis
+      const left = rect.left - (isHorizontal ? halfGap : 0);
+      const right = rect.right + (isHorizontal ? halfGap : 0);
+      const top = rect.top - (isHorizontal ? 0 : halfGap);
+      const bottom = rect.bottom + (isHorizontal ? 0 : halfGap);
+
+      const isColliding = isHorizontal
+        ? mouseX >= left && mouseX <= right
+        : mouseY >= top && mouseY <= bottom;
+
+      if (isColliding) {
+        // Calculate distance to item center to handle overlapping zones
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const distance = isHorizontal
+          ? Math.abs(mouseX - centerX)
+          : Math.abs(mouseY - centerY);
+
+        // Pick the closest item if multiple zones overlap
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestItemId = itemId;
+        }
+      }
+    }
+
+    return closestItemId;
+  };
+
+  getAcceptsDrop = (): boolean | ((item: FlexLayoutItem, sourceId: string) => boolean) => {
+    const { crossGridAcceptsDrop } = this.props;
+    return crossGridAcceptsDrop === false ? false : crossGridAcceptsDrop || true;
+  };
+
+  clearDropState = (): $Shape<State> => {
+    return {
+      isDropActive: false,
+      isDropSource: false
+    };
+  };
+
+  /**
+   * Clear external drag state and restore original layout
+   */
+  clearExternalDragState = (): void => {
+    if (!this.state.activeDrag?.i.startsWith("__external__")) return;
+
+    const externalId = this.state.activeDrag.i;
+    this.itemBounds.delete(externalId);
+
+    this.setState({
+      activeDrag: null,
+      layout: this.state.oldLayout || this.state.layout,
+      oldLayout: null,
+      transforms: new Map(),
+      currentOrder: null,
+      isDropActive: false,
+      disableTransitions: true
+    }, () => {
+      this.collectItemBounds();
+    });
+
+    this.scheduleReEnableTransitions();
+  };
+
+  /**
+   * Called when an item is removed from this flex layout (dragged to another container)
+   */
+  onItemRemovedFromFlex = (itemId: string): void => {
+    const newLayout = this.state.layout.filter(l => l.i !== itemId);
+    this.setState({ layout: newLayout }, () => {
+      this.props.onLayoutChange(newLayout);
+    });
+  };
+
+  /**
+   * Calculate insertion index based on mouse position
+   */
+  calculateInsertIndex = (mouseX: number, mouseY: number): number => {
+    if (!this.flexRef.current) return 0;
+
+    const { direction } = this.props;
+    const isHorizontal = direction === 'row' || direction === 'row-reverse';
+
+    const items = this.flexRef.current.querySelectorAll('.react-flex-item:not(.react-flex-placeholder)');
+    if (items.length === 0) return 0;
+
+    // Find the item closest to the mouse position
+    let closestIndex = 0;
+    let closestDistance = Infinity;
+
+    items.forEach((item: HTMLElement, index) => {
+      const rect = item.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      const distance = isHorizontal
+        ? Math.abs(mouseX - centerX)
+        : Math.abs(mouseY - centerY);
+
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    });
+
+    // Determine if we should insert before or after the closest item
+    const closestItem = items[closestIndex];
+    const closestRect = closestItem.getBoundingClientRect();
+
+    if (isHorizontal) {
+      // If mouse is to the right of center, insert after
+      return mouseX > closestRect.left + closestRect.width / 2
+        ? closestIndex + 1
+        : closestIndex;
+    } else {
+      // If mouse is below center, insert after
+      return mouseY > closestRect.top + closestRect.height / 2
+        ? closestIndex + 1
+        : closestIndex;
+    }
+  };
+
+  /**
+   * Renumber layout item orders after inserting at a specific index
+   */
+  renumberOrders = (layout: FlexLayout): FlexLayout => {
+    const { direction } = this.props;
+    const isReversed = direction === 'row-reverse' || direction === 'column-reverse';
+
+    return sortFlexLayoutItemsByOrder(layout).map((item, index) => {
+      const orderValue = isReversed ? (layout.length - 1 - index) : index;
+      return { ...item, order: orderValue };
+    });
+  };
+
+  /**
+   * Helper: Check if mouse is over this flex container
+   */
+  isMouseOverContainer = (mouseX: number, mouseY: number): boolean => {
+    if (!this.flexRef.current) return false;
+    const rect = this.flexRef.current.getBoundingClientRect();
+    return mouseX >= rect.left && mouseX <= rect.right &&
+           mouseY >= rect.top && mouseY <= rect.bottom;
+  };
+
+  /**
+   * Helper: Transform dragged item from source to this flex layout
+   */
+  transformDraggedItem = (dragState: any): FlexLayoutItem => {
+    const sourceConfig = this.context?.dropTargets.get(dragState.sourceId);
+    const targetConfig = {
+      id: this.props.id,
+      type: 'flex',
+      element: this.flexRef.current,
+      direction: this.props.direction,
+      gap: this.props.gap,
+      containerWidth: this.props.width,
+      containerHeight: this.getContainerHeight()
+    };
+
+    let transformedItem = dragState.item;
+    if (sourceConfig) {
+      if (this.props.crossGridTransform) {
+        transformedItem = this.props.crossGridTransform(dragState.item, sourceConfig, targetConfig);
+      } else if (this.context?.transformItem) {
+        transformedItem = this.context.transformItem(dragState.item, sourceConfig, targetConfig);
+      }
+    }
+    return transformedItem;
+  };
+
+  /**
+   * Helper: Add external item to layout for the first time
+   */
+  addExternalItemToLayout = (transformedItem: FlexLayoutItem, mouseX: number, mouseY: number): void => {
+    // Ensure we have bounds for existing items before calculating insertion point
+    if (this.itemBounds.size === 0) {
+      this.collectItemBounds();
+    }
+
+    // Save original layout (filter out any existing external items)
+    const oldLayout = this.state.oldLayout ||
+      this.state.layout.filter(item => !item.i.startsWith("__external__"));
+
+    const initialOrder = this.calculateInitialOrderForExternalItem(mouseX, mouseY);
+    const externalId = `__external__${transformedItem.i}`;
+
+    const externalItem: FlexLayoutItem = {
+      i: externalId,
+      order: initialOrder,
+      grow: transformedItem.grow !== undefined ? transformedItem.grow : 0,
+      shrink: transformedItem.shrink !== undefined ? transformedItem.shrink : 1,
+      alignSelf: transformedItem.alignSelf,
+      minWidth: transformedItem.minWidth,
+      maxWidth: transformedItem.maxWidth,
+      minHeight: transformedItem.minHeight,
+      maxHeight: transformedItem.maxHeight,
+      placeholder: true
+    };
+
+    // Increment orders of items at/after insertion point to make room
+    const updatedLayout = this.state.layout.map(item => {
+      if (item.order >= initialOrder) {
+        return { ...item, order: item.order + 1 };
+      }
+      return item;
+    });
+
+    const newLayout = [...updatedLayout, externalItem];
+
+    this.setState({
+      layout: newLayout,
+      activeDrag: externalItem,
+      oldLayout: oldLayout,
+      isDropActive: true
+    });
+  };
+
+  /**
+   * Helper: Update existing external item position during drag
+   */
+  updateExternalItemPosition = (externalId: string, mouseX: number, mouseY: number): void => {
+    // Update item sizes to account for flex-shrink changes
+    this.updateItemSizes();
+
+    if (this.itemBounds.size === 0) return;
+
+    const draggedRect = this.itemBounds.get(externalId);
+    if (!draggedRect) return;
+
+    const newOrder = this.calculateNewOrder(externalId, mouseX, mouseY);
+
+    // If newOrder is null, cursor is in a gap - keep current order
+    if (!newOrder) return;
+
+    const currentOrderStr = this.state.currentOrder?.join(',');
+    const newOrderStr = newOrder.join(',');
+    if (currentOrderStr === newOrderStr) return;
+
+    const transforms = this.calculateTransforms(externalId, newOrder, draggedRect);
+
+    this.setState({
+      transforms: new Map(transforms),
+      currentOrder: newOrder
+    });
+  };
+
+  /**
+   * Handle external drag from another drop target (grid, flex, or external)
+   * Matches ReactGridLayout's approach: Add external item to state.layout
+   */
+  handleExternalDrag = (): void => {
+    if (!this.props.enableCrossGridDrag || !this.context || !this.flexRef.current) return;
+
+    const { dragState } = this.context;
+
+    // Early exit conditions
+    if (!dragState || dragState.sourceId === this.props.id) {
+      this.clearExternalDragState();
+      return;
+    }
+
+    // Check if this flex accepts drops from the source
+    const accepts = typeof this.props.crossGridAcceptsDrop === 'function'
+      ? this.props.crossGridAcceptsDrop(dragState.item, dragState.sourceId)
+      : this.props.crossGridAcceptsDrop !== false;
+
+    if (!accepts || !this.isMouseOverContainer(dragState.mouseX, dragState.mouseY)) {
+      this.clearExternalDragState();
+      return;
+    }
+
+    // Transform item and check if already added
+    const transformedItem = this.transformDraggedItem(dragState);
+    const externalId = `__external__${transformedItem.i}`;
+    const alreadyAdded = this.state.layout.some(item => item.i === externalId);
+
+    if (!alreadyAdded) {
+      this.addExternalItemToLayout(transformedItem, dragState.mouseX, dragState.mouseY);
+    } else {
+      this.updateExternalItemPosition(externalId, dragState.mouseX, dragState.mouseY);
+    }
+  };
+
+  /**
+   * Calculate initial order for external item based on mouse position
+   * Uses same gap-extended collision detection as calculateNewOrder for consistency
+   */
+  calculateInitialOrderForExternalItem = (mouseX: number, mouseY: number): number => {
+    const { direction, gap } = this.props;
+    const isHorizontal = direction === 'row' || direction === 'row-reverse';
+    const halfGap = gap / 2;
+
+    // If no items yet, start at 0
+    if (this.originalOrder.length === 0) return 0;
+
+    // Check if we have any valid bounds (guards against race conditions)
+    let hasAnyBounds = false;
+
+    // Find insertion point using gap-extended collision detection
+    // This matches the logic in calculateNewOrder for consistent behavior
+    for (let i = 0; i < this.originalOrder.length; i++) {
+      const itemId = this.originalOrder[i];
+      const bounds = this.itemBounds.get(itemId);
+      if (!bounds) continue;
+
+      hasAnyBounds = true;
+
+      // Extend bounds by halfGap in main axis (same as calculateNewOrder)
+      const left = bounds.left - (isHorizontal ? halfGap : 0);
+      const right = bounds.right + (isHorizontal ? halfGap : 0);
+      const top = bounds.top - (isHorizontal ? 0 : halfGap);
+      const bottom = bounds.bottom + (isHorizontal ? 0 : halfGap);
+
+      // Check if mouse is in the left/top half of this item's extended zone
+      const itemMidpoint = isHorizontal
+        ? left + ((right - left) / 2)
+        : top + ((bottom - top) / 2);
+      const mousePos = isHorizontal ? mouseX : mouseY;
+
+      if (mousePos < itemMidpoint) {
+        // Insert before this item
+        return i;
+      }
+    }
+
+    // If no bounds were found (race condition), default to position 0
+    // This is safer than inserting at the end with no visual feedback
+    if (!hasAnyBounds) {
+      return 0;
+    }
+
+    // Mouse is after all items, insert at end
+    return this.originalOrder.length;
+  };
+
+  /**
+   * Handle external drop - finalize adding an external item to this flex layout
+   */
+  handleExternalDrop = (): void => {
+    if (!this.state.activeDrag || !this.state.activeDrag.i.startsWith("__external__")) return;
+
+    const { currentOrder, oldLayout } = this.state;
+    let { layout } = this.state;
+    const placeholder = this.state.activeDrag;
+
+    const originalId = placeholder.i.replace("__external__", "");
+
+    layout = layout.filter(item => !item.i.startsWith("__external__"));
+
+    const newItem: FlexLayoutItem = {
+      ...placeholder,
+      i: originalId,
+      placeholder: false
+    };
+
+    layout = [...layout, newItem];
+
+    // Apply final orders from currentOrder
+    let newLayout = layout;
+    if (currentOrder && currentOrder.length > 0) {
+      const { direction } = this.props;
+      const isReversed = direction === 'row-reverse' || direction === 'column-reverse';
+      const orderMap = new Map();
+
+      // Map each item to its final order, replacing __external__ with originalId
+      currentOrder.forEach((itemId, index) => {
+        const finalId = itemId === placeholder.i ? originalId : itemId;
+        const orderValue = isReversed ? (currentOrder.length - 1 - index) : index;
+        orderMap.set(finalId, orderValue);
+      });
+
+      newLayout = layout.map(item => {
+        const newOrder = orderMap.get(item.i);
+        if (newOrder !== undefined && newOrder !== item.order) {
+          return { ...item, order: newOrder };
+        }
+        return item;
+      });
+
+      newLayout = sortFlexLayoutItemsByOrder(newLayout);
+    } else {
+      // Fallback: just renumber if no currentOrder
+      newLayout = this.renumberOrders(layout);
+    }
+
+    // Disable transitions immediately to prevent non-dragged items from animating
+    // (same as internal drop)
+    this.setState({
+      activeDrag: null,
+      layout: newLayout,
+      oldLayout: null,
+      transforms: new Map(),
+      currentOrder: null,
+      disableTransitions: true,
+      ...this.clearDropState()
+    });
+
+    this.scheduleReEnableTransitions();
+    this.onLayoutMaybeChanged(newLayout, oldLayout || layout);
+  };
 
   /**
    * Collect bounds for all flex items from the DOM
@@ -217,24 +776,55 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
       }
     });
 
-    // Sort by visual position (left for row, top for column)
-    const { direction } = this.props;
-    const isHorizontal = direction === 'row' || direction === 'row-reverse';
+    // Create a map of item id -> layout item for looking up order property
+    const layoutMap = new Map(this.state.layout.map(item => [item.i, item]));
 
+    // Sort by order property from layout, not visual position
+    // This ensures consistency even during CSS transitions or when order !== visual position
     itemsWithBounds.sort((a, b) => {
-      if (isHorizontal) {
-        // For row layouts, sort by left position
-        return a.rect.left - b.rect.left;
-      } else {
-        // For column layouts, sort by top position
-        return a.rect.top - b.rect.top;
-      }
+      const orderA = layoutMap.get(a.id)?.order ?? 0;
+      const orderB = layoutMap.get(b.id)?.order ?? 0;
+      return orderA - orderB;
     });
 
-    // Now build originalOrder and itemBounds in visual order
+    // Now build originalOrder and itemBounds in layout order
     itemsWithBounds.forEach(({ id, rect }) => {
       this.itemBounds.set(id, rect);
       this.originalOrder.push(id);
+    });
+  };
+
+  /**
+   * Update only width/height of existing bounds (during drag).
+   * Preserves original positions to avoid capturing transformed positions.
+   * This accounts for flex-shrink changes as items redistribute space.
+   */
+  updateItemSizes = () => {
+    if (!this.flexRef.current || this.itemBounds.size === 0) return;
+
+    const items = this.flexRef.current.querySelectorAll('.react-flex-item:not(.react-flex-placeholder)');
+
+    items.forEach((item: HTMLElement) => {
+      const itemId = item.getAttribute('data-rgl-item-id');
+      if (itemId) {
+        const existingBounds = this.itemBounds.get(itemId);
+        if (existingBounds) {
+          // Use offsetWidth/offsetHeight to get actual layout size without CSS transforms
+          // getBoundingClientRect() would include transform scale which compounds errors
+          const currentWidth = item.offsetWidth;
+          const currentHeight = item.offsetHeight;
+
+          // Create new DOMRect with original position but updated size
+          const updatedBounds = new DOMRect(
+            existingBounds.x,      // Keep original position
+            existingBounds.y,      // Keep original position
+            currentWidth,          // Update width (changes due to flex-shrink)
+            currentHeight          // Update height (changes due to flex-shrink)
+          );
+
+          this.itemBounds.set(itemId, updatedBounds);
+        }
+      }
     });
   };
 
@@ -267,62 +857,67 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
 
   /**
    * Calculate the new order based on mouse cursor position
+   * Detect collision with items (including gap/2 extension)
    */
-  calculateNewOrder = (draggedId: string, mouseX: number, mouseY: number): Array<string> => {
+  calculateNewOrder = (draggedId: string, mouseX: number, mouseY: number): ?Array<string> => {
     const { direction, gap } = this.props;
     const isHorizontal = direction === 'row' || direction === 'row-reverse';
     const halfGap = gap / 2;
-    let hoveredItemId = null;
 
-    for (const [itemId, rect] of this.itemBounds.entries()) {
-      if (itemId === draggedId) continue;
+    // Use shared collision detection
+    const hoveredItemId = this.findItemAtPosition(mouseX, mouseY);
 
-      const left = rect.left - (isHorizontal ? halfGap : 0);
-      const right = rect.right + (isHorizontal ? halfGap : 0);
-      const top = rect.top - (isHorizontal ? 0 : halfGap);
-      const bottom = rect.bottom + (isHorizontal ? 0 : halfGap);
-
-      const isColliding = isHorizontal
-        ? mouseX >= left && mouseX <= right
-        : mouseY >= top && mouseY <= bottom;
-
-      if (isColliding) {
-        hoveredItemId = itemId;
-        break;
-      }
-    }
-
-    const items = this.originalOrder.filter(id => id !== draggedId);
-
+    // If hovering over an item (including self), that's the target position
     if (hoveredItemId) {
-      const draggedOriginalIndex = this.originalOrder.indexOf(draggedId);
-      const hoveredOriginalIndex = this.originalOrder.indexOf(hoveredItemId);
-      let insertIndex = items.indexOf(hoveredItemId);
+      const targetIndex = this.originalOrder.indexOf(hoveredItemId);
+      const draggedIndex = this.originalOrder.indexOf(draggedId);
 
-      if (hoveredOriginalIndex > draggedOriginalIndex) {
-        insertIndex += 1;
+      // Already at target position, no change needed
+      if (targetIndex === draggedIndex) {
+        return this.originalOrder;
       }
 
-      const newOrder = [...items];
-      newOrder.splice(insertIndex, 0, draggedId);
+      // Create new order by moving dragged item to target position
+      const newOrder = [...this.originalOrder];
+      newOrder.splice(draggedIndex, 1); // Remove from current position
+      newOrder.splice(targetIndex, 0, draggedId); // Insert at target position
       return newOrder;
     }
 
-    if (items.length > 0) {
-      const firstRect = this.itemBounds.get(items[0]);
-      const lastRect = this.itemBounds.get(items[items.length - 1]);
+    // No collision - check if before first or after last item
+    if (this.originalOrder.length > 0) {
+      const firstId = this.originalOrder[0];
+      const lastId = this.originalOrder[this.originalOrder.length - 1];
+      const firstRect = this.itemBounds.get(firstId);
+      const lastRect = this.itemBounds.get(lastId);
 
       if (firstRect && lastRect) {
         const firstBound = isHorizontal ? firstRect.left - halfGap : firstRect.top - halfGap;
         const lastBound = isHorizontal ? lastRect.right + halfGap : lastRect.bottom + halfGap;
         const cursorPos = isHorizontal ? mouseX : mouseY;
 
-        if (cursorPos < firstBound) return [draggedId, ...items];
-        if (cursorPos > lastBound) return [...items, draggedId];
+        if (cursorPos < firstBound) {
+          // Before first item
+          const newOrder = [...this.originalOrder];
+          const draggedIndex = newOrder.indexOf(draggedId);
+          newOrder.splice(draggedIndex, 1);
+          newOrder.unshift(draggedId);
+          return newOrder;
+        }
+        if (cursorPos > lastBound) {
+          // After last item
+          const newOrder = [...this.originalOrder];
+          const draggedIndex = newOrder.indexOf(draggedId);
+          newOrder.splice(draggedIndex, 1);
+          newOrder.push(draggedId);
+          return newOrder;
+        }
       }
     }
 
-    return [...this.originalOrder];
+    // In a gap between items - keep current order by returning null
+    // Caller should handle this by not updating state
+    return null;
   };
 
   /**
@@ -337,11 +932,13 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
     const transforms = new Map();
     const { direction, gap } = this.props;
     const isHorizontal = direction === 'row' || direction === 'row-reverse';
+    const isReversed = direction === 'row-reverse' || direction === 'column-reverse';
     const draggedSize = (isHorizontal ? draggedRect.width : draggedRect.height) + gap;
 
     const oldDraggedIndex = this.originalOrder.indexOf(draggedId);
     const newDraggedIndex = newOrder.indexOf(draggedId);
 
+    // Calculate placeholder transform (where dragged item will land)
     if (oldDraggedIndex !== -1 && newDraggedIndex !== -1 && oldDraggedIndex !== newDraggedIndex) {
       const startIndex = Math.min(oldDraggedIndex, newDraggedIndex);
       const endIndex = Math.max(oldDraggedIndex, newDraggedIndex);
@@ -358,7 +955,10 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
         }
       }
 
-      totalOffset *= moveDirection;
+      // Apply direction multiplier for reverse layouts
+      const directionMultiplier = isReversed ? -1 : 1;
+      totalOffset *= moveDirection * directionMultiplier;
+
       transforms.set('__placeholder__', isHorizontal
         ? { x: totalOffset, y: 0 }
         : { x: 0, y: totalOffset }
@@ -367,6 +967,8 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
       transforms.set('__placeholder__', { x: 0, y: 0 });
     }
 
+    // Calculate transforms for each displaced item
+    // Items shift by the dragged item's size to fill the gap it left
     this.originalOrder.forEach((id, oldIndex) => {
       if (id === draggedId) return;
 
@@ -374,7 +976,10 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
       const indexDiff = newIndex - oldIndex;
 
       if (indexDiff !== 0) {
-        const offset = (indexDiff < 0 ? -1 : 1) * draggedSize;
+        // All displaced items shift by the dragged item's size
+        // Direction multiplier handles row-reverse and column-reverse
+        const directionMultiplier = isReversed ? -1 : 1;
+        const offset = (indexDiff < 0 ? -1 : 1) * draggedSize * directionMultiplier;
         transforms.set(id, isHorizontal ? { x: offset, y: 0 } : { x: 0, y: offset });
       } else {
         transforms.set(id, { x: 0, y: 0 });
@@ -393,8 +998,41 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
     if (!l) return;
 
     const { e, node, newPosition } = eventData;
+    const { oldDragItem } = this.state;
+
+    // Collapse item when over a valid drop target (not when over empty space)
+    let shouldCollapseItem = false;
+    if (this.props.enableCrossGridDrag && this.context?.dragState && oldDragItem) {
+      const { dragState } = this.context;
+      if (dragState.sourceId === this.props.id) {
+        for (const [targetId, targetConfig] of this.context.dropTargets.entries()) {
+          if (targetId !== this.props.id && targetConfig.element) {
+            const accepts = typeof targetConfig.acceptsDrop === 'function'
+              ? targetConfig.acceptsDrop(dragState.item, dragState.sourceId)
+              : targetConfig.acceptsDrop;
+
+            if (accepts) {
+              const rect = targetConfig.element.getBoundingClientRect();
+              if (dragState.mouseX >= rect.left && dragState.mouseX <= rect.right &&
+                  dragState.mouseY >= rect.top && dragState.mouseY <= rect.bottom) {
+                shouldCollapseItem = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Preserve original flex properties
+    const draggedGrow = oldDragItem?.grow ?? l.grow;
+    const draggedShrink = oldDragItem?.shrink ?? l.shrink;
 
     if (this.itemBounds.size > 0 && newPosition && e) {
+      // Update item sizes to account for flex-shrink changes as items reorder
+      // Preserves original positions to avoid capturing transformed positions.
+      this.updateItemSizes();
+
       const draggedRect = new DOMRect(
         newPosition.left,
         newPosition.top,
@@ -402,13 +1040,51 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
         newPosition.height
       );
 
-      const newOrder = this.calculateNewOrder(i, e.clientX, e.clientY);
+      // Create layout for calculations
+      // If collapsing, set item to zero size so other items fill the gap
+      let layoutForCalculation = this.state.layout;
+      if (shouldCollapseItem) {
+        layoutForCalculation = this.state.layout.map(item =>
+          item.i === i
+            ? { ...item, grow: 0, shrink: 1, maxWidth: 0, maxHeight: 0 }
+            : item
+        );
+      }
+
+      let newOrder = shouldCollapseItem
+        ? this.originalOrder // Keep original order when collapsed
+        : this.calculateNewOrder(i, e.clientX, e.clientY);
+
+      // If newOrder is null, cursor is in a gap - keep current order
+      if (!newOrder) {
+        newOrder = this.state.currentOrder || this.originalOrder;
+      }
+
       const transforms = this.calculateTransforms(i, newOrder, draggedRect);
+
+      // Restore original flex properties in the final layout
+      const finalLayout = layoutForCalculation.map(item =>
+        item.i === i
+          ? { ...item, grow: draggedGrow, shrink: draggedShrink, maxWidth: oldDragItem?.maxWidth, maxHeight: oldDragItem?.maxHeight }
+          : item
+      );
+
+      // Determine if this flex is the drag source for CSS class application
+      const isSourceFlex = this.props.enableCrossGridDrag &&
+                           this.context?.dragState &&
+                           this.context.dragState.sourceId === this.props.id;
 
       flushSync(() => {
         this.setState({
+          layout: finalLayout,
           transforms: new Map(transforms),
-          currentOrder: newOrder
+          currentOrder: newOrder,
+          activeDrag: {
+            ...this.state.activeDrag,
+            hidden: shouldCollapseItem
+          },
+          isDropSource: !!isSourceFlex,
+          isDropActive: isSourceFlex && !shouldCollapseItem
         });
       });
     }
@@ -458,21 +1134,38 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
       layout: newLayout,
       oldLayout: null,
       oldDragItem: null,
-      disableTransitions: true
+      activeDrag: null,
+      disableTransitions: true,
+      ...this.clearDropState()
     });
 
-    if (this.transitionTimeout) {
-      clearTimeout(this.transitionTimeout);
-    }
-    this.transitionTimeout = setTimeout(() => {
-      this.setState({ disableTransitions: false });
-    }, 50);
+    this.scheduleReEnableTransitions();
 
     // Notify parent if layout changed
     this.onLayoutMaybeChanged(newLayout, oldLayout);
 
     return onDragStop(newLayout, l, l, null, e, node);
   };
+
+  /**
+   * Render external item if it exists in layout
+   * External items are in state.layout but not in props.children
+   * We create a synthetic child for them to render in the flex flow
+   */
+  renderExternalItem(): ?ReactElement<any> {
+    // Find external item in layout
+    const externalItem = this.state.layout.find(item => item.i.startsWith("__external__"));
+    if (!externalItem) return null;
+
+    // Create synthetic child for external item
+    // Use renderDroppingItem if provided, otherwise use empty div
+    const syntheticChild = this.props.renderDroppingItem
+      ? React.cloneElement(this.props.renderDroppingItem(externalItem), { key: externalItem.i })
+      : <div key={externalItem.i} />;
+
+    // Process it through normal flex item rendering
+    return this.processFlexItem(syntheticChild, false);
+  }
 
   /**
    * Given a FlexLayoutItem, generate the child element.
@@ -502,11 +1195,30 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
         ? l.isDraggable
         : !l.static && isDraggable;
 
+    // Check if this is an external placeholder item (for static/draggable logic)
+    const isExternalPlaceholder = l.i.startsWith("__external__");
+
     // Get transform offset for this item (for visual reordering)
-    const transform = this.state.transforms.get(l.i) || { x: 0, y: 0 };
+    // External placeholders should not have transform offset - they stay in place
+    // Only their placeholder shows where they will land (using placeholderTransform)
+    const transform = isExternalPlaceholder
+      ? { x: 0, y: 0 }
+      : this.state.transforms.get(l.i) || { x: 0, y: 0 };
 
     // Get placeholder transform (where the dragged item will land)
     const placeholderTransform = this.state.transforms.get('__placeholder__') || { x: 0, y: 0 };
+
+    // Check if this item's placeholder should be hidden (when dragging over external target)
+    const hidePlaceholder = this.state.activeDrag?.hidden && l.i === this.state.activeDrag.i;
+
+    // Get external size from bounds (for sizing placeholder like internal drag)
+    let externalSize;
+    if (isExternalPlaceholder) {
+      const bounds = this.itemBounds.get(l.i);
+      if (bounds) {
+        externalSize = { width: bounds.width, height: bounds.height };
+      }
+    }
 
     return (
       <FlexItem
@@ -515,15 +1227,15 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
         order={l.order}
         grow={l.grow}
         shrink={l.shrink}
-        basis={l.basis}
         alignSelf={l.alignSelf}
+        direction={this.props.direction}
         minWidth={l.minWidth}
         maxWidth={l.maxWidth}
         minHeight={l.minHeight}
         maxHeight={l.maxHeight}
         containerWidth={width}
-        static={l.static}
-        isDraggable={draggable}
+        static={l.static || isExternalPlaceholder}
+        isDraggable={draggable && !isExternalPlaceholder}
         isBounded={isBounded}
         useCSSTransforms={useCSSTransforms}
         transformScale={transformScale}
@@ -536,6 +1248,12 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
         style={child.props.style}
         transformOffset={transform}
         placeholderTransform={placeholderTransform}
+        hidePlaceholder={hidePlaceholder}
+        isExternalPlaceholder={isExternalPlaceholder}
+        externalSize={externalSize}
+        flexId={this.props.id}
+        enableCrossGridDrag={this.props.enableCrossGridDrag}
+        dragDropContext={this.context}
       >
         {child}
       </FlexItem>
@@ -549,7 +1267,9 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
       layoutClassName,
       className,
       {
-        'react-flex-no-transition': this.state.disableTransitions
+        'react-flex-no-transition': this.state.disableTransitions,
+        'drop-active': this.state.isDropActive,
+        'drop-source': this.state.isDropSource
       }
     );
     const mergedStyle = {
@@ -574,6 +1294,7 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
           (child: ReactElement<any>) =>
             this.processFlexItem(child, this.props.isDraggable)
         )}
+        {this.renderExternalItem()}
       </div>
     );
   }

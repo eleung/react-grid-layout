@@ -6,6 +6,7 @@ import { DraggableCore } from "react-draggable";
 import clsx from "clsx";
 import type { Element as ReactElement } from "react";
 import type { FlexLayoutItem, FlexAlignSelf, FlexDragEvent } from "./flexUtils";
+import type { DragDropContextValue } from "./DragDropContext";
 
 type PartialPosition = { top: number, left: number, width: number, height: number };
 type FlexPosition = { top: number, left: number };
@@ -34,7 +35,6 @@ type Props = {
   order: number,
   grow: number,
   shrink: number,
-  basis: string | number,
   alignSelf?: FlexAlignSelf,
 
   // Constraints
@@ -69,7 +69,21 @@ type Props = {
   transformOffset?: {x: number, y: number},
 
   // Placeholder transform offset (where dragged item will land)
-  placeholderTransform?: {x: number, y: number}
+  placeholderTransform?: {x: number, y: number},
+
+  // Hide placeholder (when dragging over external target)
+  hidePlaceholder?: boolean,
+
+  // Is this an external placeholder item (for showing placeholder without drag)
+  isExternalPlaceholder?: boolean,
+
+  // External placeholder size (for sizing placeholder like internal drag)
+  externalSize?: {width: number, height: number},
+
+  // Cross-container drag
+  flexId?: ?string,
+  enableCrossGridDrag?: boolean,
+  dragDropContext?: ?DragDropContextValue
 };
 
 type State = {
@@ -97,7 +111,6 @@ export default class FlexItem extends React.Component<Props, State> {
     order: PropTypes.number.isRequired,
     grow: PropTypes.number.isRequired,
     shrink: PropTypes.number.isRequired,
-    basis: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     alignSelf: PropTypes.oneOf([
       "auto",
       "flex-start",
@@ -106,6 +119,12 @@ export default class FlexItem extends React.Component<Props, State> {
       "stretch",
       "baseline"
     ]),
+    direction: PropTypes.oneOf([
+      "row",
+      "column",
+      "row-reverse",
+      "column-reverse"
+    ]).isRequired,
 
     // Constraints
     minWidth: PropTypes.number,
@@ -131,6 +150,13 @@ export default class FlexItem extends React.Component<Props, State> {
 
     className: PropTypes.string.isRequired,
     style: PropTypes.object,
+
+    // Placeholder
+    isExternalPlaceholder: PropTypes.bool,
+    externalSize: PropTypes.shape({
+      width: PropTypes.number,
+      height: PropTypes.number
+    }),
 
     // Callbacks
     onDrag: PropTypes.func,
@@ -164,7 +190,6 @@ export default class FlexItem extends React.Component<Props, State> {
       order,
       grow,
       shrink,
-      basis,
       alignSelf,
       minWidth,
       maxWidth,
@@ -197,8 +222,7 @@ export default class FlexItem extends React.Component<Props, State> {
         // Preserve flex properties for when we return to flex layout
         order,
         flexGrow: grow,
-        flexShrink: shrink,
-        flexBasis: typeof basis === "number" ? `${basis}px` : basis
+        flexShrink: shrink
       };
     }
 
@@ -206,8 +230,7 @@ export default class FlexItem extends React.Component<Props, State> {
     const flexStyles = {
       order,
       flexGrow: grow,
-      flexShrink: shrink,
-      flexBasis: typeof basis === "number" ? `${basis}px` : basis
+      flexShrink: shrink
     };
 
     // Add alignSelf if specified
@@ -281,6 +304,37 @@ export default class FlexItem extends React.Component<Props, State> {
       disableTransitions: false
     });
 
+    // Notify drag-drop context
+    if (this.props.enableCrossGridDrag && this.props.dragDropContext && this.props.flexId) {
+      const flexItem = {
+        i: this.props.i,
+        order: this.props.order,
+        grow: this.props.grow,
+        shrink: this.props.shrink,
+        alignSelf: this.props.alignSelf,
+        minWidth: this.props.minWidth,
+        maxWidth: this.props.maxWidth,
+        minHeight: this.props.minHeight,
+        maxHeight: this.props.maxHeight,
+        // Include dimensions for transformation
+        width: rect.width,
+        height: rect.height
+      };
+
+      // Calculate offset from item's top-left to mouse position
+      const offsetX = e.clientX - rect.left;
+      const offsetY = e.clientY - rect.top;
+
+      this.props.dragDropContext.startDrag(
+        this.props.flexId,
+        flexItem,
+        e.clientX,
+        e.clientY,
+        offsetX,
+        offsetY
+      );
+    }
+
     // Call callback
     return onDragStart.call(this, this.props.i, this.props.order, {
       e,
@@ -327,6 +381,12 @@ export default class FlexItem extends React.Component<Props, State> {
       this.setState({ dragging: newPosition });
     });
 
+    // Update drag-drop context with mouse position
+    if (this.props.enableCrossGridDrag && this.props.dragDropContext &&
+        e.clientX != null && e.clientY != null) {
+      this.props.dragDropContext.updateDrag(e.clientX, e.clientY);
+    }
+
     // Call callback
     return onDrag.call(this, this.props.i, this.props.order, {
       e,
@@ -355,6 +415,27 @@ export default class FlexItem extends React.Component<Props, State> {
       width,
       height
     };
+
+    // Notify drag-drop context about drag end
+    // The context will determine if this was dropped on a target (grid, flex, or external)
+    if (this.props.enableCrossGridDrag && this.props.dragDropContext && this.props.flexId) {
+      // Determine which drop target we're over based on mouse position
+      let targetId = null;
+      if (this.props.dragDropContext.dragState) {
+        // Check if mouse is over a different drop target
+        for (const [id, targetConfig] of this.props.dragDropContext.dropTargets.entries()) {
+          if (id !== this.props.flexId && targetConfig.element) {
+            const rect = targetConfig.element.getBoundingClientRect();
+            if (e.clientX >= rect.left && e.clientX <= rect.right &&
+                e.clientY >= rect.top && e.clientY <= rect.bottom) {
+              targetId = id;
+              break;
+            }
+          }
+        }
+      }
+      this.props.dragDropContext.endDrag(targetId);
+    }
 
     if (!originalFlexPosition) {
       this.setState({ dragging: null, animating: null, originalFlexPosition: null });
@@ -440,7 +521,6 @@ export default class FlexItem extends React.Component<Props, State> {
       order,
       grow,
       shrink,
-      basis,
       alignSelf,
       minWidth,
       maxWidth,
@@ -465,32 +545,65 @@ export default class FlexItem extends React.Component<Props, State> {
     );
 
     // Clone child with our styles and classes
+    const childStyle = {
+      ...children.props.style,
+      ...this.createStyle()
+    };
+
+    // For external placeholders, hide the content
+    if (this.props.isExternalPlaceholder) {
+      // Always hide the content (even on first render before we have bounds)
+      childStyle.opacity = 0;
+      childStyle.pointerEvents = 'none';
+
+      // If we have bounds, position absolutely off-screen to prevent layout shift
+      if (this.props.externalSize) {
+        childStyle.position = 'absolute';
+        childStyle.top = '-9999px';
+        childStyle.left = '-9999px';
+      }
+    }
+
     let newChild = React.cloneElement(children, {
       ref: this.elementRef,
       className: clsx(children.props.className, classes),
       "data-rgl-item-id": this.props.i, // For reliable DOM -> layout item matching
-      style: {
-        ...children.props.style,
-        ...this.createStyle()
-      }
+      style: childStyle
     });
 
     // Wrap with Draggable support
     newChild = this.mixinDraggable(newChild, isDraggable);
 
     // If dragging or animating, render a placeholder to hold the space in flex layout
-    const showPlaceholder = dragging || animating;
+    // For external items, always show placeholder (they're not draggable but need placeholder)
+    // Don't show placeholder if hidePlaceholder prop is true (dragging over external target)
+    const showPlaceholder = ((dragging || animating) || this.props.isExternalPlaceholder) && !this.props.hidePlaceholder;
     if (showPlaceholder) {
-      const sizeSource = dragging || animating;
+      // Use same sizing logic for both internal and external drags
+      const sizeSource = dragging || animating || this.props.externalSize;
+
       const placeholderStyle = {
         order,
-        flexGrow: 0,
-        flexShrink: 0,
+        flexGrow: 0,      // Fixed size - don't grow
+        flexShrink: 0,    // Fixed size - don't shrink
         flexBasis: 'auto',
-        width: `${sizeSource.width}px`,
-        height: `${sizeSource.height}px`,
         boxSizing: 'border-box'
       };
+
+      // Use sizeSource dimensions (works for both internal drag and external placeholder)
+      // Only set size in main axis - let flexbox stretch in cross axis
+      if (sizeSource) {
+        const { direction } = this.props;
+        const isHorizontal = direction === 'row' || direction === 'row-reverse';
+
+        if (isHorizontal) {
+          // Row: set width (main axis), let height stretch (cross axis)
+          placeholderStyle.width = `${sizeSource.width}px`;
+        } else {
+          // Column: set height (main axis), let width stretch (cross axis)
+          placeholderStyle.height = `${sizeSource.height}px`;
+        }
+      }
 
       if (alignSelf) placeholderStyle.alignSelf = alignSelf;
 
