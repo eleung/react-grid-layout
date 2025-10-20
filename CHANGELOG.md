@@ -27,7 +27,7 @@
   - Works with both `layout` prop and `data-flex` attribute on children
   - Static items support (non-draggable)
   - Cross-grid drag and drop support (when wrapped in `DragDropProvider`)
-  - See [example #24](https://react-grid-layout.github.io/react-grid-layout/examples/24-basic-flex.html) and [example #25](https://react-grid-layout.github.io/react-grid-layout/examples/25-flex-directions.html)
+  - See [example #24](https://eleung.github.io/react-grid-layout/examples/24-basic-flex.html) and [example #25](https://eleung.github.io/react-grid-layout/examples/25-flex-directions.html)
 
 - **Drag and Drop System**: Comprehensive drag and drop support for both grids and external containers.
 
@@ -43,7 +43,7 @@
     - Accept drops only from specific grids
     - Accept only certain item types
     - Conditional acceptance based on grid state
-  - See [example #22](https://react-grid-layout.github.io/react-grid-layout/examples/22-cross-grid-drag.html)
+  - See [example #22](https://eleung.github.io/react-grid-layout/examples/22-cross-grid-drag.html)
 
   **External Droppable Containers**: Items can now be dragged from grids to custom external drop zones.
   - New `<Droppable>` component for creating custom drop targets outside grids
@@ -58,7 +58,7 @@
   - Live placeholder positioning with `onDragOver` called on every mouse move
   - Same smart collapse behavior as cross-grid drag
   - Perfect for trash zones, collection zones, toolboxes, and custom workflows
-  - See [example #23](https://react-grid-layout.github.io/react-grid-layout/examples/23-external-droppable.html)
+  - See [example #23](https://eleung.github.io/react-grid-layout/examples/23-external-droppable.html)
 
   **Cross-Layout Drag and Drop (Grid ↔ Flex)**: Items can now be dragged between grid and flex layouts seamlessly.
   - Automatic item transformation between layout types:
@@ -69,7 +69,7 @@
   - Visual placeholder rendering for external items being dragged into flex layouts
   - Conditional drop acceptance via predicate functions works across all layout types
   - New `renderDroppingItem` prop for `ReactFlexLayout` to customize external item appearance
-  - See [example #26](https://react-grid-layout.github.io/react-grid-layout/examples/26-grid-flex-drag.html), [example #27](https://react-grid-layout.github.io/react-grid-layout/examples/27-flex-droppable.html), and [example #28](https://react-grid-layout.github.io/react-grid-layout/examples/28-comprehensive-drag.html)
+  - See [example #26](https://eleung.github.io/react-grid-layout/examples/26-grid-flex-drag.html), [example #27](https://eleung.github.io/react-grid-layout/examples/27-flex-droppable.html), and [example #28](https://eleung.github.io/react-grid-layout/examples/28-comprehensive-drag.html)
 
 ### Breaking Changes
 
@@ -165,7 +165,7 @@ Hey, it's been a long time! Taking a year and a half off is a pretty "open-sourc
 
 - **Grid items can now be resized left and up!** Thanks to @ludovic and @dseif for all the hard work they did on this. [#1917](https://github.com/react-grid-layout/react-grid-layout/pull/1917)
   - To use, specify `resizeHandles` directions on your `<GridItem>`s. See [the example](/test/examples/20-resizable-handles.jsx) for more on how to do this.
-  - See also [the demo](https://react-grid-layout.github.io/react-grid-layout/examples/20-resizable-handles.html).
+  - See also [the demo](https://eleung.github.io/react-grid-layout/examples/20-resizable-handles.html).
 - `<WidthProvider>` now uses a `ResizeObserver` instead of hooking into the window's `'resize'` event. [#1839](https://github.com/react-grid-layout/react-grid-layout/pull/1839)
   - This should not be breaking for any users but introduces a new dependency, [resize-observer-polyfill](https://www.npmjs.com/package/resize-observer-polyfill). It will not be imported unless you use `<WidthProvider>`.
 
@@ -457,8 +457,8 @@ Thanks to @daynin and @n1ghtmare for taking an active role in maintaining RGL, a
 
 ### New Features
 
-- Added ability to drag items into the grid from outside. [#980](https://github.com/STRML/react-grid-layout/pull/980). See [the example](https://react-grid-layout.github.io/react-grid-layout/examples/15-drag-from-outside.html).
-  - This is especially exciting as it opens up new "widget toolbox" use cases such as [Example 14](https://react-grid-layout.github.io/react-grid-layout/examples/14-toolbox.html) with more intuitive interaction. Thanks @daynin.
+- Added ability to drag items into the grid from outside. [#980](https://github.com/STRML/react-grid-layout/pull/980). See [the example](https://eleung.github.io/react-grid-layout/examples/15-drag-from-outside.html).
+  - This is especially exciting as it opens up new "widget toolbox" use cases such as [Example 14](https://eleung.github.io/react-grid-layout/examples/14-toolbox.html) with more intuitive interaction. Thanks @daynin.
 - `transformScale` prop [#987](https://github.com/STRML/react-grid-layout/pull/987)
 - `<ResponsiveReactGridLayout>` now supports margin-per-breakpoint [#1016](https://github.com/STRML/react-grid-layout/pull/1016)
 

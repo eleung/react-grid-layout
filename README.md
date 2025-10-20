@@ -17,7 +17,7 @@ RGL is React-only and does not require jQuery.
 
 > GIF from production usage on [BitMEX.com](https://www.bitmex.com)
 
-[**[Demo](https://react-grid-layout.github.io/react-grid-layout/) | [Changelog](/CHANGELOG.md) | [CodeSandbox Editable demo](https://codesandbox.io/s/5wy3rz5z1x?module=%2Fsrc%2FShowcaseLayout.js)**]
+[**[Demo](https://eleung.github.io/react-grid-layout/) | [Changelog](/CHANGELOG.md) | [CodeSandbox Editable demo](https://codesandbox.io/s/5wy3rz5z1x?module=%2Fsrc%2FShowcaseLayout.js)**]
 
 ## Table of Contents
 
@@ -45,35 +45,35 @@ RGL is React-only and does not require jQuery.
 
 ## Demos
 
-1. [Showcase](https://react-grid-layout.github.io/react-grid-layout/examples/00-showcase.html)
-1. [Basic](https://react-grid-layout.github.io/react-grid-layout/examples/01-basic.html)
-1. [No Dragging/Resizing (Layout Only)](https://react-grid-layout.github.io/react-grid-layout/examples/02-no-dragging.html)
-1. [Messy Layout Autocorrect](https://react-grid-layout.github.io/react-grid-layout/examples/03-messy.html)
-1. [Layout Defined on Children](https://react-grid-layout.github.io/react-grid-layout/examples/04-grid-property.html)
-1. [Static Elements](https://react-grid-layout.github.io/react-grid-layout/examples/05-static-elements.html)
-1. [Adding/Removing Elements](https://react-grid-layout.github.io/react-grid-layout/examples/06-dynamic-add-remove.html)
-1. [Saving Layout to LocalStorage](https://react-grid-layout.github.io/react-grid-layout/examples/07-localstorage.html)
-1. [Saving a Responsive Layout to LocalStorage](https://react-grid-layout.github.io/react-grid-layout/examples/08-localstorage-responsive.html)
-1. [Minimum and Maximum Width/Height](https://react-grid-layout.github.io/react-grid-layout/examples/09-min-max-wh.html)
-1. [Dynamic Minimum and Maximum Width/Height](https://react-grid-layout.github.io/react-grid-layout/examples/10-dynamic-min-max-wh.html)
-1. [No Vertical Compacting (Free Movement)](https://react-grid-layout.github.io/react-grid-layout/examples/11-no-vertical-compact.html)
-1. [Prevent Collision](https://react-grid-layout.github.io/react-grid-layout/examples/12-prevent-collision.html)
-1. [Error Case](https://react-grid-layout.github.io/react-grid-layout/examples/13-error-case.html)
-1. [Toolbox](https://react-grid-layout.github.io/react-grid-layout/examples/14-toolbox.html)
-1. [Drag From Outside](https://react-grid-layout.github.io/react-grid-layout/examples/15-drag-from-outside.html)
-1. [Bounded Layout](https://react-grid-layout.github.io/react-grid-layout/examples/16-bounded.html)
-1. [Responsive Bootstrap-style Layout](https://react-grid-layout.github.io/react-grid-layout/examples/17-responsive-bootstrap-style.html)
-1. [Scaled Containers](https://react-grid-layout.github.io/react-grid-layout/examples/18-scale.html)
-1. [Allow Overlap](https://react-grid-layout.github.io/react-grid-layout/examples/19-allow-overlap.html)
-1. [All Resizable Handles](https://react-grid-layout.github.io/react-grid-layout/examples/20-resizable-handles.html)
-1. [Single Row Horizontal](https://react-grid-layout.github.io/react-grid-layout/examples/21-horizontal.html)
-1. [Cross-Grid Drag and Drop](https://react-grid-layout.github.io/react-grid-layout/examples/22-cross-grid-drag.html)
-1. [External Droppable Containers](https://react-grid-layout.github.io/react-grid-layout/examples/23-external-droppable.html)
-1. [Basic Flex Layout](https://react-grid-layout.github.io/react-grid-layout/examples/24-basic-flex.html)
-1. [Flex Layout Directions](https://react-grid-layout.github.io/react-grid-layout/examples/25-flex-directions.html)
-1. [Grid ↔ Flex Drag and Drop](https://react-grid-layout.github.io/react-grid-layout/examples/26-grid-flex-drag.html)
-1. [Flex ↔ Flex + Droppable](https://react-grid-layout.github.io/react-grid-layout/examples/27-flex-droppable.html)
-1. [Comprehensive Drag & Drop](https://react-grid-layout.github.io/react-grid-layout/examples/28-comprehensive-drag.html)
+1. [Showcase](https://eleung.github.io/react-grid-layout/examples/00-showcase.html)
+1. [Basic](https://eleung.github.io/react-grid-layout/examples/01-basic.html)
+1. [No Dragging/Resizing (Layout Only)](https://eleung.github.io/react-grid-layout/examples/02-no-dragging.html)
+1. [Messy Layout Autocorrect](https://eleung.github.io/react-grid-layout/examples/03-messy.html)
+1. [Layout Defined on Children](https://eleung.github.io/react-grid-layout/examples/04-grid-property.html)
+1. [Static Elements](https://eleung.github.io/react-grid-layout/examples/05-static-elements.html)
+1. [Adding/Removing Elements](https://eleung.github.io/react-grid-layout/examples/06-dynamic-add-remove.html)
+1. [Saving Layout to LocalStorage](https://eleung.github.io/react-grid-layout/examples/07-localstorage.html)
+1. [Saving a Responsive Layout to LocalStorage](https://eleung.github.io/react-grid-layout/examples/08-localstorage-responsive.html)
+1. [Minimum and Maximum Width/Height](https://eleung.github.io/react-grid-layout/examples/09-min-max-wh.html)
+1. [Dynamic Minimum and Maximum Width/Height](https://eleung.github.io/react-grid-layout/examples/10-dynamic-min-max-wh.html)
+1. [No Vertical Compacting (Free Movement)](https://eleung.github.io/react-grid-layout/examples/11-no-vertical-compact.html)
+1. [Prevent Collision](https://eleung.github.io/react-grid-layout/examples/12-prevent-collision.html)
+1. [Error Case](https://eleung.github.io/react-grid-layout/examples/13-error-case.html)
+1. [Toolbox](https://eleung.github.io/react-grid-layout/examples/14-toolbox.html)
+1. [Drag From Outside](https://eleung.github.io/react-grid-layout/examples/15-drag-from-outside.html)
+1. [Bounded Layout](https://eleung.github.io/react-grid-layout/examples/16-bounded.html)
+1. [Responsive Bootstrap-style Layout](https://eleung.github.io/react-grid-layout/examples/17-responsive-bootstrap-style.html)
+1. [Scaled Containers](https://eleung.github.io/react-grid-layout/examples/18-scale.html)
+1. [Allow Overlap](https://eleung.github.io/react-grid-layout/examples/19-allow-overlap.html)
+1. [All Resizable Handles](https://eleung.github.io/react-grid-layout/examples/20-resizable-handles.html)
+1. [Single Row Horizontal](https://eleung.github.io/react-grid-layout/examples/21-horizontal.html)
+1. [Cross-Grid Drag and Drop](https://eleung.github.io/react-grid-layout/examples/22-cross-grid-drag.html)
+1. [External Droppable Containers](https://eleung.github.io/react-grid-layout/examples/23-external-droppable.html)
+1. [Basic Flex Layout](https://eleung.github.io/react-grid-layout/examples/24-basic-flex.html)
+1. [Flex Layout Directions](https://eleung.github.io/react-grid-layout/examples/25-flex-directions.html)
+1. [Grid ↔ Flex Drag and Drop](https://eleung.github.io/react-grid-layout/examples/26-grid-flex-drag.html)
+1. [Flex ↔ Flex + Droppable](https://eleung.github.io/react-grid-layout/examples/27-flex-droppable.html)
+1. [Comprehensive Drag & Drop](https://eleung.github.io/react-grid-layout/examples/28-comprehensive-drag.html)
 
 #### Projects Using React-Grid-Layout
 
