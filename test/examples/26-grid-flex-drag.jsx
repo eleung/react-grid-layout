@@ -134,7 +134,6 @@ export default class GridFlexDrag extends React.Component {
             <div style={{ flex: "1 1 400px", minWidth: "300px" }}>
               <h3>Flex Layout (Row)</h3>
               <ReactFlexLayout
-                width={400}
                 direction="row"
                 gap={10}
                 id="flex-1"
@@ -143,7 +142,7 @@ export default class GridFlexDrag extends React.Component {
                 layout={this.state.flexLayout}
                 onLayoutChange={this.onFlexLayoutChange}
                 renderDroppingItem={this.renderFlexLayout1DroppingItem}
-                style={{ background: "#f9f9f9", minHeight: "300px", padding: "10px" }}
+                style={{ background: "#f9f9f9", minHeight: "300px", padding: "10px", width: "400px" }}
               >
                 {this.state.flexLayout.map(item => (
                   <div key={item.i} style={{
@@ -164,7 +163,6 @@ export default class GridFlexDrag extends React.Component {
             <div style={{ flex: "1 1 400px", minWidth: "300px" }}>
               <h3>Flex Layout (Column)</h3>
               <ReactFlexLayout
-                width={400}
                 direction="column"
                 gap={10}
                 id="flex-2"
@@ -173,7 +171,7 @@ export default class GridFlexDrag extends React.Component {
                 layout={this.state.flexLayout2}
                 onLayoutChange={this.onFlexLayout2Change}
                 renderDroppingItem={this.renderFlexLayout2DroppingItem}
-                style={{ background: "#f9f9f9", minHeight: "300px", padding: "10px" }}
+                style={{ background: "#f9f9f9", minHeight: "300px", padding: "10px", width: "400px" }}
               >
                 {this.state.flexLayout2.map(item => (
                   <div key={item.i} style={{

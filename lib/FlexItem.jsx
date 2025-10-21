@@ -43,9 +43,6 @@ type Props = {
   minHeight?: number,
   maxHeight?: number,
 
-  // Container width for boundary calculations
-  containerWidth?: number,
-
   // Item identifier
   i: string,
 
@@ -134,8 +131,6 @@ export default class FlexItem extends React.Component<Props, State> {
     maxWidth: PropTypes.number,
     minHeight: PropTypes.number,
     maxHeight: PropTypes.number,
-
-    containerWidth: PropTypes.number,
 
     // Item identifier
     i: PropTypes.string.isRequired,
@@ -355,7 +350,7 @@ export default class FlexItem extends React.Component<Props, State> {
     e,
     { node, deltaX, deltaY }
   ) => {
-    const { onDrag, isBounded, containerWidth } = this.props;
+    const { onDrag, isBounded } = this.props;
     if (!onDrag) return;
 
     if (!this.state.dragging) {
@@ -367,14 +362,14 @@ export default class FlexItem extends React.Component<Props, State> {
     const { width, height } = this.state.dragging;
 
     // Boundary calculations - keep item within container
-    if (isBounded && containerWidth) {
+    if (isBounded) {
       const { offsetParent } = node;
       if (offsetParent) {
         // Clamp to container boundaries
         const bottomBoundary = offsetParent.clientHeight - height;
         top = Math.max(0, Math.min(top, bottomBoundary));
 
-        const rightBoundary = containerWidth - width;
+        const rightBoundary = offsetParent.clientWidth - width;
         left = Math.max(0, Math.min(left, rightBoundary));
       }
     }

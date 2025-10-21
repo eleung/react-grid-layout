@@ -67,7 +67,6 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
   context: ?DragDropContextValue;
 
   static defaultProps: DefaultProps = {
-    autoSize: true,
     className: "",
     style: {},
     draggableHandle: "",
@@ -133,7 +132,6 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
         {
           direction: this.props.direction,
           gap: this.props.gap,
-          containerWidth: this.props.width,
           containerHeight: this.getContainerHeight(),
           acceptsDrop: this.getAcceptsDrop(),
           onItemRemoved: this.onItemRemovedFromFlex
@@ -247,13 +245,11 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
     if (!this.props.enableCrossGridDrag || !this.context || !this.props.id) return;
 
     if (
-      prevProps.width !== this.props.width ||
       prevProps.direction !== this.props.direction ||
       prevProps.gap !== this.props.gap ||
       prevProps.crossGridAcceptsDrop !== this.props.crossGridAcceptsDrop
     ) {
       this.context.updateDropTargetConfig(this.props.id, {
-        containerWidth: this.props.width,
         direction: this.props.direction,
         gap: this.props.gap,
         containerHeight: this.getContainerHeight(),
@@ -352,16 +348,6 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
       }
     }
   };
-
-  /**
-   * Calculates a pixel value for the container.
-   */
-  containerHeight(): ?string {
-    if (!this.props.autoSize) return;
-
-    // For flex, we let the browser handle height
-    return "auto";
-  }
 
   /**
    * Get actual container height for drop target registration
@@ -557,7 +543,6 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
       element: this.flexRef.current,
       direction: this.props.direction,
       gap: this.props.gap,
-      containerWidth: this.props.width,
       containerHeight: this.getContainerHeight()
     };
 
@@ -1288,7 +1273,6 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
     if (!l) return null;
 
     const {
-      width,
       gap,
       draggableHandle,
       draggableCancel,
@@ -1332,7 +1316,6 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
         maxWidth={l.maxWidth}
         minHeight={l.minHeight}
         maxHeight={l.maxHeight}
-        containerWidth={width}
         static={l.static || isExternalPlaceholder}
         isDraggable={draggable && !isExternalPlaceholder}
         isBounded={isBounded}
@@ -1360,7 +1343,7 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
   }
 
   render(): ReactElement<"div"> {
-    const { className, style, width, direction, justifyContent, alignItems, gap } = this.props;
+    const { className, style, direction, justifyContent, alignItems, gap } = this.props;
 
     const mergedClassName = clsx(
       layoutClassName,
@@ -1372,8 +1355,6 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
       }
     );
     const mergedStyle = {
-      height: this.containerHeight(),
-      width: `${width}px`,
       display: "flex",
       flexDirection: direction,
       justifyContent,

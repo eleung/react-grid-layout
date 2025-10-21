@@ -120,7 +120,6 @@ export default class FlexDroppable extends React.Component {
               <div>
                 <h3>Flex Layout 1 (Row Direction)</h3>
                 <ReactFlexLayout
-                  width={600}
                   direction="row"
                   gap={10}
                   id="flex-1"
@@ -129,7 +128,7 @@ export default class FlexDroppable extends React.Component {
                   layout={this.state.flexLayout1}
                   onLayoutChange={this.onFlexLayout1Change}
                   renderDroppingItem={this.renderFlexLayout1DroppingItem}
-                  style={{ background: "#f9f9f9", minHeight: "150px", padding: "10px" }}
+                  style={{ background: "#f9f9f9", minHeight: "150px", padding: "10px", width: "600px" }}
                 >
                   {this.state.flexLayout1.map(item => (
                     <div key={item.i} style={{
@@ -150,7 +149,6 @@ export default class FlexDroppable extends React.Component {
               <div>
                 <h3>Flex Layout 2 (Column Direction)</h3>
                 <ReactFlexLayout
-                  width={600}
                   direction="column"
                   gap={10}
                   id="flex-2"
@@ -159,7 +157,7 @@ export default class FlexDroppable extends React.Component {
                   layout={this.state.flexLayout2}
                   onLayoutChange={this.onFlexLayout2Change}
                   renderDroppingItem={this.renderFlexLayout2DroppingItem}
-                  style={{ background: "#f9f9f9", minHeight: "250px", padding: "10px" }}
+                  style={{ background: "#f9f9f9", minHeight: "250px", padding: "10px", width: "600px" }}
                 >
                   {this.state.flexLayout2.map(item => (
                     <div key={item.i} style={{
