@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.6.3 (Oct 21, 2025)
+
+### Improvements
+
+- **Simplified ReactFlexLayout API**: Removed unnecessary `width` and `autoSize` props
+  - Flex containers now size naturally via CSS (use `style` prop for width)
+  - Removed `containerWidth` prop from FlexItem
+  - Boundary detection now uses `offsetParent.clientWidth` dynamically
+  - Examples updated to use CSS width instead of prop
+
 ## 1.6.2 (Oct 20, 2025)
 
 ### Bug Fixes

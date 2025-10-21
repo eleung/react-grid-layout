@@ -433,7 +433,7 @@ class CrossLayoutExample extends React.Component {
           isDraggable={true}
           direction="row"
           gap={10}
-          width={600}
+          style={{ width: "600px" }}
           layout={this.state.flexLayout}
           onLayoutChange={this.onFlexChange}
         >
@@ -559,7 +559,7 @@ class MyFlexLayout extends React.Component {
         justifyContent="flex-start"
         alignItems="stretch"
         gap={10}
-        width={1200}
+        style={{ width: "1200px" }}
       >
         <div key="a">Item A</div>
         <div key="b">Item B (grows)</div>
@@ -612,7 +612,7 @@ You can also define flex properties directly on children:
 <ReactFlexLayout
   direction="row"
   gap={10}
-  width={1200}
+  style={{ width: "1200px" }}
 >
   <div key="a" data-flex={{ order: 0, grow: 0, shrink: 1 }}>
     a
@@ -1065,16 +1065,10 @@ If this is a problem for you, set `margin=[0,0]` and handle visual spacing betwe
 // Basic props
 //
 
-// Container width in pixels. Required unless using WidthProvider.
-width: number,
-
-// If true, the container height swells and contracts to fit contents
-autoSize: ?boolean = true,
-
 // CSS class name
 className: ?string = "",
 
-// Inline styles
+// Inline styles (can include width for sizing)
 style: ?Object = {},
 
 //

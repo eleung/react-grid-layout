@@ -1,6 +1,6 @@
 {
   "name": "@eleung/react-grid-layout",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "description": "A draggable and resizable grid layout with responsive breakpoints, for React. Includes Flexbox layout support and cross-layout drag and drop.",
   "main": "index.js",
   "scripts": {
