@@ -180,7 +180,10 @@ function synchronizeFlexLayoutWithChildren(layout /*: FlexLayout*/, children /*:
   _react.default.Children.forEach(children, (child /*: ReactElement<any>*/, i /*: number*/) => {
     if (!child || !child.key) return;
     const exists = getFlexLayoutItem(layout, String(child.key));
-    if (exists) {
+    const f = child.props["data-flex"];
+    // Don't overwrite the layout item if it's already in the layout.
+    // If it has a `data-flex` property, prefer that over what's in the layout.
+    if (exists && f == null) {
       newLayout.push(cloneFlexLayoutItem(exists));
     } else {
       if (!isProduction && child.props._grid) {
@@ -195,11 +198,11 @@ function synchronizeFlexLayoutWithChildren(layout /*: FlexLayout*/, children /*:
         shrink: 1
       };
 
-      // Check for data-flex attribute
-      if (child.props["data-flex"]) {
+      // Hey, this item has a data-flex property, use it.
+      if (f) {
         newLayout.push({
           ...defaultFlexItem,
-          ...child.props["data-flex"]
+          ...f
         });
       } else {
         newLayout.push(defaultFlexItem);
@@ -210,10 +213,16 @@ function synchronizeFlexLayoutWithChildren(layout /*: FlexLayout*/, children /*:
 }
 
 /**
- * Given two flex layouts, check if they have the same items (by id).
+ * Given two flex layouts, check if they have the same items (by id) and same data-flex props.
  */
 function childrenEqual(a /*: ReactChildrenArray<ReactElement<any>>*/, b /*: ReactChildrenArray<ReactElement<any>>*/) /*: boolean*/{
-  return (0, _fastEquals.deepEqual)(_react.default.Children.map(a, c => c?.key), _react.default.Children.map(b, c => c?.key));
+  return (0, _fastEquals.deepEqual)(_react.default.Children.map(a, c => ({
+    key: c?.key,
+    dataFlex: c?.props?.["data-flex"]
+  })), _react.default.Children.map(b, c => ({
+    key: c?.key,
+    dataFlex: c?.props?.["data-flex"]
+  })));
 }
 
 /**

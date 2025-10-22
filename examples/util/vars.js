@@ -240,4 +240,13 @@ module.exports = [
       "This demonstrates all drag and drop combinations: Grid ↔ Grid, Grid ↔ Flex, Flex ↔ Flex, and dragging to external drop zones."
     ]
   },
+  {
+    title: "Data-Flex Attributes",
+    source: "data-flex",
+    paragraphs: [
+      "This demonstrates using data-flex attributes on children instead of providing a layout prop.",
+      "Click the buttons to dynamically change flex properties (grow/shrink) - the changes will trigger re-renders.",
+      "Try dragging items to reorder them, and toggle grow/shrink to see how items resize."
+    ]
+  },
 ];
