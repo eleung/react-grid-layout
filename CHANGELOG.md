@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.4 (Oct 22, 2025)
+
+### Bug Fixes
+
+- **Fixed data-flex updates not triggering re-renders**: `data-flex` attribute changes now properly trigger layout updates
+  - Updated `synchronizeFlexLayoutWithChildren` to prefer `data-flex` over existing layout (matching `data-grid` behavior)
+  - Updated `childrenEqual` to compare `data-flex` properties in addition to keys
+  - Added example #29 demonstrating dynamic `data-flex` property updates
+
 ## 1.6.3 (Oct 21, 2025)
 
 ### Improvements
