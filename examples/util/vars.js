@@ -249,4 +249,13 @@ module.exports = [
       "Try dragging items to reorder them, and toggle grow/shrink to see how items resize."
     ]
   },
+  {
+    title: "Flex Layout - No Dragging",
+    source: "flex-no-dragging",
+    paragraphs: [
+      "This demonstrates ReactFlexLayout with dragging disabled.",
+      "Items are displayed in a flex layout but cannot be moved.",
+      "Every third item has flex-grow: 1 to demonstrate flexible sizing."
+    ]
+  },
 ];
