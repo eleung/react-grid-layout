@@ -258,4 +258,14 @@ module.exports = [
       "Every third item has flex-grow: 1 to demonstrate flexible sizing."
     ]
   },
+  {
+    title: "Flex Layout-Driven Rendering",
+    source: "flex-layout-driven",
+    paragraphs: [
+      "This example uses layout as the single source of truth - items are rendered directly from layout state.",
+      "This tests React reconciliation behavior when children array changes during drag operations.",
+      "Try the buttons to trigger children changes, then immediately drag items forward (to higher order) and backward (to lower order).",
+      "Open the browser console to see detailed lifecycle logs from FlexItem components and ReactFlexLayout state changes."
+    ]
+  },
 ];
