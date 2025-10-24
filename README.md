@@ -74,6 +74,9 @@ RGL is React-only and does not require jQuery.
 1. [Grid ↔ Flex Drag and Drop](https://eleung.github.io/react-grid-layout/examples/26-grid-flex-drag.html)
 1. [Flex ↔ Flex + Droppable](https://eleung.github.io/react-grid-layout/examples/27-flex-droppable.html)
 1. [Comprehensive Drag & Drop](https://eleung.github.io/react-grid-layout/examples/28-comprehensive-drag.html)
+1. [Data-Flex Attributes](https://eleung.github.io/react-grid-layout/examples/29-data-flex.html)
+1. [Flex Layout (No Dragging)](https://eleung.github.io/react-grid-layout/examples/30-flex-no-dragging.html)
+1. [Flex Layout-Driven Rendering](https://eleung.github.io/react-grid-layout/examples/31-flex-layout-driven.html)
 
 #### Projects Using React-Grid-Layout
 

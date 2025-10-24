@@ -36,7 +36,7 @@ build-js:
 	@$(EXEC) babel --out-dir $(BUILD) $(LIB)
 
 # Will build for use on github pages. Full url of page is
-# https://react-grid-layout.github.io/react-grid-layout/examples/00-showcase.html
+# https://eleung.github.io/react-grid-layout/examples/00-showcase.html
 # so the CONTENT_BASE should adapt.
 build-example: build clean-example
 	@$(EXEC) webpack --config webpack-examples.config.js
