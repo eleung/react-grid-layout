@@ -249,4 +249,23 @@ module.exports = [
       "Try dragging items to reorder them, and toggle grow/shrink to see how items resize."
     ]
   },
+  {
+    title: "Flex Layout - No Dragging",
+    source: "flex-no-dragging",
+    paragraphs: [
+      "This demonstrates ReactFlexLayout with dragging disabled.",
+      "Items are displayed in a flex layout but cannot be moved.",
+      "Every third item has flex-grow: 1 to demonstrate flexible sizing."
+    ]
+  },
+  {
+    title: "Flex Layout-Driven Rendering",
+    source: "flex-layout-driven",
+    paragraphs: [
+      "This example uses layout as the single source of truth - items are rendered directly from layout state.",
+      "This tests React reconciliation behavior when children array changes during drag operations.",
+      "Try the buttons to trigger children changes, then immediately drag items forward (to higher order) and backward (to lower order).",
+      "Open the browser console to see detailed lifecycle logs from FlexItem components and ReactFlexLayout state changes."
+    ]
+  },
 ];

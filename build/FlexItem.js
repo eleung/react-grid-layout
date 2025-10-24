@@ -95,7 +95,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
   dragging: ?PartialPosition,
   animating: ?PartialPosition,
   originalFlexPosition: ?FlexPosition,
-  disableTransitions: boolean
+  disableTransitions: boolean,
+  pendingAnimation: boolean,
+  pendingAnimationPosition: ?PartialPosition
 };*/
 /*:: type DefaultProps = {
   className: string,
@@ -113,7 +115,9 @@ class FlexItem extends _react.default.Component /*:: <Props, State>*/{
       dragging: null,
       animating: null,
       originalFlexPosition: null,
-      disableTransitions: false
+      disableTransitions: false,
+      pendingAnimation: false,
+      pendingAnimationPosition: null
     });
     _defineProperty(this, "animationTimeout", null);
     _defineProperty(this, "transitionTimeout", null);
@@ -325,18 +329,17 @@ class FlexItem extends _react.default.Component /*:: <Props, State>*/{
         return;
       }
 
-      // Calculate final position: original position + placeholder transform offset
-      const finalLeft = originalFlexPosition.left + (placeholderTransform?.x || 0);
-      const finalTop = originalFlexPosition.top + (placeholderTransform?.y || 0);
-      const finalPosition /*: PartialPosition*/ = {
-        left: finalLeft,
-        top: finalTop,
-        width,
-        height
-      };
+      // Defer animation calculation until after layout updates
+      // This ensures correct animation target when parent reorders children
       this.setState({
         dragging: null,
-        animating: finalPosition
+        pendingAnimation: true,
+        pendingAnimationPosition: {
+          top: this.state.dragging.top,
+          left: this.state.dragging.left,
+          width,
+          height
+        }
       });
 
       // After animation completes (200ms), disable transitions to prevent flash when
@@ -386,11 +389,12 @@ class FlexItem extends _react.default.Component /*:: <Props, State>*/{
     } = this.props;
     const {
       dragging,
-      animating
+      animating,
+      pendingAnimationPosition
     } = this.state;
 
-    // If dragging or animating, use absolute positioning with transforms
-    const positionOverride = dragging || animating;
+    // Use absolute positioning during drag, animation, or pending animation
+    const positionOverride = dragging || animating || pendingAnimationPosition;
     if (positionOverride && useCSSTransforms) {
       const translate = `translate(${positionOverride.left}px, ${positionOverride.top}px)`;
       return {
@@ -453,6 +457,35 @@ class FlexItem extends _react.default.Component /*:: <Props, State>*/{
   componentDidMount() {
     this.mounted = true;
   }
+  componentDidUpdate(prevProps /*: Props*/, prevState /*: State*/) {
+    if (this.state.pendingAnimation && !prevState.pendingAnimation) {
+      requestAnimationFrame(() => {
+        if (!this.mounted || !this.state.pendingAnimation) return;
+        const node = this.elementRef.current;
+        if (!node || !node.offsetParent) {
+          this.setState({
+            pendingAnimation: false,
+            originalFlexPosition: null
+          });
+          return;
+        }
+
+        // Read position from placeholder (in flex flow) instead of item (absolutely positioned)
+        const placeholder = node.offsetParent.querySelector(`.react-flex-placeholder[data-placeholder-for="${this.props.i}"]`);
+        const rect = node.getBoundingClientRect();
+        this.setState({
+          pendingAnimation: false,
+          pendingAnimationPosition: null,
+          animating: {
+            left: placeholder ? placeholder.offsetLeft : node.offsetLeft,
+            top: placeholder ? placeholder.offsetTop : node.offsetTop,
+            width: rect.width,
+            height: rect.height
+          }
+        });
+      });
+    }
+  }
   componentWillUnmount() {
     this.mounted = false;
     if (this.animationTimeout) {
@@ -496,7 +529,9 @@ class FlexItem extends _react.default.Component /*:: <Props, State>*/{
     } = this.props;
     const {
       dragging,
-      animating
+      animating,
+      pendingAnimation,
+      pendingAnimationPosition
     } = this.state;
 
     // Disable transitions if prop is set OR if state disables them
@@ -508,6 +543,7 @@ class FlexItem extends _react.default.Component /*:: <Props, State>*/{
       "react-draggable": isDraggable,
       "react-draggable-dragging": Boolean(dragging),
       "react-flex-animating": Boolean(animating),
+      "react-flex-pending-animation": Boolean(pendingAnimation),
       "react-flex-no-transition": shouldDisableTransitions,
       cssTransforms: useCSSTransforms
     });
@@ -536,13 +572,10 @@ class FlexItem extends _react.default.Component /*:: <Props, State>*/{
     // Wrap with Draggable support
     newChild = this.mixinDraggable(newChild, isDraggable);
 
-    // If dragging or animating, render a placeholder to hold the space in flex layout
-    // External items DON'T get placeholder here - they're rendered separately in ReactFlexLayout
-    // Don't show placeholder if hidePlaceholder prop is true (dragging over external target)
-    const showPlaceholder = (dragging || animating) && !this.props.isExternalPlaceholder && !this.props.hidePlaceholder;
+    // Render placeholder during drag/animation to hold space in flex layout
+    const showPlaceholder = (dragging || animating || pendingAnimation) && !this.props.isExternalPlaceholder && !this.props.hidePlaceholder;
     if (showPlaceholder) {
-      // Use same sizing logic for internal drags
-      const sizeSource = dragging || animating;
+      const sizeSource = dragging || animating || pendingAnimationPosition;
       const placeholderStyle = {
         order,
         flexGrow: 0,
@@ -578,6 +611,7 @@ class FlexItem extends _react.default.Component /*:: <Props, State>*/{
       const placeholder = /*#__PURE__*/_react.default.createElement("div", {
         key: "placeholder",
         className: "react-flex-item react-flex-placeholder placeholder-dragging",
+        "data-placeholder-for": this.props.i,
         style: placeholderStyle
       });
       return /*#__PURE__*/_react.default.createElement(_react.default.Fragment, null, newChild, placeholder);
