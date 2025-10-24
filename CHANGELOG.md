@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.6.5 (Oct 24, 2025)
+
+### Bug Fixes
+
+- **Fixed flex layout animation for forward drag reordering**: Animation now works correctly when parent components reorder children during drag operations
+  - Deferred animation calculation until after React reconciliation completes
+  - Animation target now read from placeholder element (in flex flow) instead of dragged item (absolutely positioned)
+  - Fixes issue where dragging items forward (to position > current index) in layout-driven rendering would break animations
+  - Added example #31 demonstrating layout-driven rendering pattern
+
+### Documentation
+
+- Added missing examples to README (examples 29-31)
+- Updated documentation links to use eleung.github.io domain
+
 ## 1.6.4 (Oct 22, 2025)
 
 ### Bug Fixes
