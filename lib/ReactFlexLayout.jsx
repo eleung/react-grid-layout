@@ -1187,10 +1187,16 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
     const externalItem = this.state.layout.find(item => item.i.startsWith("__external__"));
     if (!externalItem) return null;
 
+    // Strip __external__ prefix for renderDroppingItem callback
+    const cleanItem = {
+      ...externalItem,
+      i: externalItem.i.replace("__external__", "")
+    };
+
     // Create synthetic child for external item
     // Use renderDroppingItem if provided, otherwise use empty div
     const syntheticChild = this.props.renderDroppingItem
-      ? React.cloneElement(this.props.renderDroppingItem(externalItem), { key: externalItem.i })
+      ? React.cloneElement(this.props.renderDroppingItem(cleanItem), { key: externalItem.i })
       : <div key={externalItem.i} />;
 
     // Process it through normal flex item rendering
