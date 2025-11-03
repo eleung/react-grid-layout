@@ -7,8 +7,7 @@ import {
   childrenEqual,
   synchronizeFlexLayoutWithChildren,
   getFlexLayoutItem,
-  noop,
-  sortFlexLayoutItemsByOrder
+  noop
 } from "./flexUtils";
 
 import FlexItem from "./FlexItem";
@@ -516,7 +515,8 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
     const { direction } = this.props;
     const isReversed = direction === 'row-reverse' || direction === 'column-reverse';
 
-    return sortFlexLayoutItemsByOrder(layout).map((item, index) => {
+    // Don't sort - maintain array order, only update order property
+    return layout.map((item, index) => {
       const orderValue = isReversed ? (layout.length - 1 - index) : index;
       return { ...item, order: orderValue };
     });
@@ -754,8 +754,6 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
         }
         return item;
       });
-
-      newLayout = sortFlexLayoutItemsByOrder(newLayout);
     } else {
       // Fallback: just renumber if no currentOrder
       newLayout = this.renumberOrders(layout);
@@ -1156,8 +1154,6 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
         }
         return item;
       });
-
-      newLayout = sortFlexLayoutItemsByOrder(newLayout);
     }
 
     // Disable transitions immediately to prevent non-dragged items from animating.
