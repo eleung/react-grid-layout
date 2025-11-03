@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.7 (Nov 3, 2025)
+
+### Bug Fixes
+
+- **Strip `__external__` prefix from items passed to `renderDroppingItem`**: Internal implementation detail no longer exposed to user callbacks
+
 ## 1.6.6 (Nov 3, 2025)
 
 ### Performance
