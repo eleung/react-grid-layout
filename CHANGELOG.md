@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.6 (Nov 3, 2025)
+
+### Performance
+
+- **Removed unnecessary array sorting from flex layout**: Layout array now maintains stable order while CSS flexbox `order` property handles visual ordering
+  - Eliminates React reconciliation issues caused by array reordering
+  - Maintains stable React keys for better performance
+  - Simplifies mental model - array order and visual order are independent
+
 ## 1.6.5 (Oct 24, 2025)
 
 ### Bug Fixes
