@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.10 (Nov 3, 2025)
+
+### Bug Fixes
+
+- **Exclude collapsed item from container height calculation**: Fixes source container height when item is dragged over target container in cross-container drag operations
+
 ## 1.6.8 (Nov 3, 2025)
 
 ### Bug Fixes
