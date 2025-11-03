@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.11 (Nov 3, 2025)
+
+### Bug Fixes
+
+- **Update placeholder position after bounds recollection on container resize**: Ensures placeholder position is recalculated when flex container resizes during drag operations
+
 ## 1.6.10 (Nov 3, 2025)
 
 ### Bug Fixes
