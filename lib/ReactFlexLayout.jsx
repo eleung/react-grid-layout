@@ -117,6 +117,8 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
   transitionTimeout: ?TimeoutID = null;
   // Store mouse position when external item is first added (for calculating initial order after bounds collection)
   pendingExternalMousePosition: ?{ mouseX: number, mouseY: number } = null;
+  // Store current mouse position during drag for updating placeholder after resize
+  currentDragMousePos: ?{ mouseX: number, mouseY: number, draggedId: string } = null;
   // ResizeObserver for container size changes during drag
   resizeObserver: ?ResizeObserver = null;
   // Debounce timeout for resize-triggered bounds recollection
@@ -153,6 +155,14 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
           // Only recollect if there's an active drag
           if (this.state.activeDrag && this.itemBounds.size > 0) {
             this.collectItemBounds();
+            // Update placeholder position after bounds recollection
+            if (this.currentDragMousePos) {
+              this.updatePlaceholderPosition(
+                this.currentDragMousePos.draggedId,
+                this.currentDragMousePos.mouseX,
+                this.currentDragMousePos.mouseY
+              );
+            }
           }
         }, 50);
       });
@@ -1049,6 +1059,106 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
   };
 
   /**
+   * Update placeholder position based on mouse coordinates
+   * Used after bounds recollection during container resize
+   */
+  updatePlaceholderPosition = (i: string, mouseX: number, mouseY: number) => {
+    const l = getFlexLayoutItem(this.state.layout, i);
+    if (!l || this.itemBounds.size === 0) return;
+
+    const { oldDragItem } = this.state;
+
+    // Check if item should be collapsed (over another container)
+    let shouldCollapseItem = false;
+    if (this.props.enableCrossGridDrag && this.context?.dragState && oldDragItem) {
+      const { dragState } = this.context;
+      if (dragState.sourceId === this.props.id) {
+        for (const [targetId, targetConfig] of this.context.dropTargets.entries()) {
+          if (targetId !== this.props.id && targetConfig.element) {
+            const accepts = typeof targetConfig.acceptsDrop === 'function'
+              ? targetConfig.acceptsDrop(dragState.item, dragState.sourceId)
+              : targetConfig.acceptsDrop;
+
+            if (accepts) {
+              const rect = targetConfig.element.getBoundingClientRect();
+              if (dragState.mouseX >= rect.left && dragState.mouseX <= rect.right &&
+                  dragState.mouseY >= rect.top && dragState.mouseY <= rect.bottom) {
+                shouldCollapseItem = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Update item sizes to account for flex-shrink changes
+    this.updateItemSizes();
+
+    // Get dragged item's current bounds
+    const draggedBounds = this.itemBounds.get(i);
+    if (!draggedBounds) return;
+
+    const draggedRect = new DOMRect(
+      draggedBounds.left,
+      draggedBounds.top,
+      draggedBounds.width,
+      draggedBounds.height
+    );
+
+    // Preserve original flex properties
+    const draggedGrow = oldDragItem?.grow ?? l.grow;
+    const draggedShrink = oldDragItem?.shrink ?? l.shrink;
+
+    // Create layout for calculations
+    let layoutForCalculation = this.state.layout;
+    if (shouldCollapseItem) {
+      layoutForCalculation = this.state.layout.map(item =>
+        item.i === i
+          ? { ...item, grow: 0, shrink: 1, maxWidth: 0, maxHeight: 0 }
+          : item
+      );
+    }
+
+    let newOrder = shouldCollapseItem
+      ? this.originalOrder
+      : this.calculateNewOrder(i, mouseX, mouseY);
+
+    // If newOrder is null, cursor is in a gap - keep current order
+    if (!newOrder) {
+      newOrder = this.state.currentOrder || this.originalOrder;
+    }
+
+    const transforms = this.calculateTransforms(i, newOrder, draggedRect);
+
+    // Restore original flex properties in the final layout
+    const finalLayout = layoutForCalculation.map(item =>
+      item.i === i
+        ? { ...item, grow: draggedGrow, shrink: draggedShrink, maxWidth: oldDragItem?.maxWidth, maxHeight: oldDragItem?.maxHeight }
+        : item
+    );
+
+    // Determine if this flex is the drag source for CSS class application
+    const isSourceFlex = this.props.enableCrossGridDrag &&
+                         this.context?.dragState &&
+                         this.context.dragState.sourceId === this.props.id;
+
+    flushSync(() => {
+      this.setState({
+        layout: finalLayout,
+        transforms: new Map(transforms),
+        currentOrder: newOrder,
+        activeDrag: {
+          ...this.state.activeDrag,
+          hidden: shouldCollapseItem
+        },
+        isDropSource: !!isSourceFlex,
+        isDropActive: isSourceFlex && !shouldCollapseItem
+      });
+    });
+  };
+
+  /**
    * onDrag event handler
    */
   onDrag = (i: string, order: number, eventData: Object) => {
@@ -1058,6 +1168,11 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
 
     const { e, node, newPosition } = eventData;
     const { oldDragItem } = this.state;
+
+    // Store current mouse position for updating placeholder after resize
+    if (e) {
+      this.currentDragMousePos = { mouseX: e.clientX, mouseY: e.clientY, draggedId: i };
+    }
 
     // Collapse item when over a valid drop target (not when over empty space)
     let shouldCollapseItem = false;
@@ -1197,6 +1312,7 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
     });
 
     this.scheduleReEnableTransitions();
+    this.currentDragMousePos = null;
 
     // Notify parent if layout changed
     this.onLayoutMaybeChanged(newLayout, oldLayout);
