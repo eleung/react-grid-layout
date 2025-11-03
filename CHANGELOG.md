@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.8 (Nov 3, 2025)
+
+### Bug Fixes
+
+- **Recollect item bounds when flex container resizes during drag**: Fixes cross-container drag issues where container size changes invalidate collision detection bounds
+  - Uses ResizeObserver to detect container size changes
+  - Automatically recollects bounds during active drag operations (50ms debounce)
+
 ## 1.6.7 (Nov 3, 2025)
 
 ### Bug Fixes
