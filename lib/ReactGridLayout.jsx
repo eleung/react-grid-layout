@@ -324,7 +324,12 @@ export default class ReactGridLayout extends React.Component<Props, State> {
    */
   containerHeight(): ?string {
     if (!this.props.autoSize) return;
-    const nbRow = bottom(this.state.layout);
+    // Exclude collapsed item from height calculation
+    let layoutForHeight = this.state.layout;
+    if (this.state.activeDrag?.hidden) {
+      layoutForHeight = this.state.layout.filter(item => item.i !== this.state.activeDrag.i);
+    }
+    const nbRow = bottom(layoutForHeight);
     const containerPaddingY = this.props.containerPadding
       ? this.props.containerPadding[1]
       : this.props.margin[1];
