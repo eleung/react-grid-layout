@@ -798,6 +798,7 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
 
     // Disable transitions immediately to prevent non-dragged items from animating
     // (same as internal drop)
+    // componentDidUpdate will call onLayoutMaybeChanged
     this.setState({
       activeDrag: null,
       layout: newLayout,
@@ -809,7 +810,6 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
     });
 
     this.scheduleReEnableTransitions();
-    this.onLayoutMaybeChanged(newLayout, oldLayout || layout);
   };
 
   /**

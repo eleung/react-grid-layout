@@ -940,15 +940,13 @@ export default class ReactGridLayout extends React.Component<Props, State> {
       ? layout
       : compact(layout, compactType(this.props), cols);
 
-    // Update state and notify
+    // Update state - componentDidUpdate will call onLayoutMaybeChanged
     this.setState({
       activeDrag: null,
       layout: newLayout,
       oldLayout: null,
       ...this.clearDropState()
     });
-
-    this.onLayoutMaybeChanged(newLayout, this.state.oldLayout || layout);
   };
 
   getAcceptsDrop = (): boolean | ((item: LayoutItem, sourceId: string) => boolean) => {
