@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.12 (Nov 3, 2025)
+
+### Bug Fixes
+
+- **Fix double onLayoutChange call on cross-container drop**: Prevents onLayoutChange from being called twice when dropping items between containers
+
 ## 1.6.11 (Nov 3, 2025)
 
 ### Bug Fixes
