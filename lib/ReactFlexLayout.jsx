@@ -462,6 +462,16 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
     };
   };
 
+  clearDragState = (): $Shape<State> => {
+    return {
+      activeDrag: null,
+      oldLayout: null,
+      oldDragItem: null,
+      currentOrder: null,
+      transforms: new Map()
+    };
+  };
+
   /**
    * Clear external drag state and restore original layout
    */
@@ -470,14 +480,11 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
 
     const externalId = this.state.activeDrag.i;
     this.itemBounds.delete(externalId);
-    this.pendingExternalMousePosition = null;  // Clear pending mouse position
+    this.pendingExternalMousePosition = null;
 
     this.setState({
-      activeDrag: null,
+      ...this.clearDragState(),
       layout: this.state.oldLayout || this.state.layout,
-      oldLayout: null,
-      transforms: new Map(),
-      currentOrder: null,
       isDropActive: false,
       disableTransitions: true
     }, () => {
@@ -492,7 +499,10 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
    */
   onItemRemovedFromFlex = (itemId: string): void => {
     const newLayout = this.state.layout.filter(l => l.i !== itemId);
-    this.setState({ layout: newLayout }, () => {
+    this.setState({
+      layout: newLayout,
+      ...this.clearDragState()
+    }, () => {
       this.props.onLayoutChange(newLayout);
     });
   };
@@ -1298,15 +1308,9 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
       });
     }
 
-    // Disable transitions immediately to prevent non-dragged items from animating.
-    // The dragged item has its own animation via FlexItem's animating state.
     this.setState({
-      transforms: new Map(),
-      currentOrder: null,
+      ...this.clearDragState(),
       layout: newLayout,
-      oldLayout: null,
-      oldDragItem: null,
-      activeDrag: null,
       disableTransitions: true,
       ...this.clearDropState()
     });
