@@ -121,8 +121,8 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
   currentDragMousePos: ?{ mouseX: number, mouseY: number, draggedId: string } = null;
   // ResizeObserver for container size changes during drag
   resizeObserver: ?ResizeObserver = null;
-  // Debounce timeout for resize-triggered bounds recollection
-  resizeDebounceTimeout: ?TimeoutID = null;
+  // RAF ID for resize-triggered bounds recollection
+  resizeRafId: ?number = null;
 
   componentDidMount() {
     this.setState({ mounted: true });
@@ -147,11 +147,11 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
     // Set up ResizeObserver to recollect bounds when container resizes during drag
     if (this.flexRef.current && typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => {
-        // Debounce to avoid excessive recollections
-        if (this.resizeDebounceTimeout) {
-          clearTimeout(this.resizeDebounceTimeout);
+        // Use RAF to sync with browser repaints during CSS transitions
+        if (this.resizeRafId) {
+          cancelAnimationFrame(this.resizeRafId);
         }
-        this.resizeDebounceTimeout = setTimeout(() => {
+        this.resizeRafId = requestAnimationFrame(() => {
           // Only recollect if there's an active drag
           if (this.state.activeDrag && this.itemBounds.size > 0) {
             this.collectItemBounds();
@@ -164,7 +164,7 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
               );
             }
           }
-        }, 50);
+        });
       });
       this.resizeObserver.observe(this.flexRef.current);
     }
@@ -237,8 +237,8 @@ export default class ReactFlexLayout extends React.Component<Props, State> {
     if (this.transitionTimeout) {
       clearTimeout(this.transitionTimeout);
     }
-    if (this.resizeDebounceTimeout) {
-      clearTimeout(this.resizeDebounceTimeout);
+    if (this.resizeRafId) {
+      cancelAnimationFrame(this.resizeRafId);
     }
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
