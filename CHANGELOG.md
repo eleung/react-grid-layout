@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.13 (Nov 6, 2025)
+
+### Bug Fixes
+
+- **Fix flex layout state corruption on external drag-out**: Clears stale drag state when items are removed from flex layout to prevent subsequent external drops from failing. Refactored common drag state clearing logic into reusable helper.
+- **Use RAF instead of setTimeout for resize bounds recollection**: Replaced setTimeout debounce with requestAnimationFrame to sync bounds collection with browser repaints during CSS transitions, fixing stale itemBounds during container resize animations.
+
 ## 1.6.12 (Nov 3, 2025)
 
 ### Bug Fixes
